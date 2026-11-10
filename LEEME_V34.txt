@@ -1,0 +1,69 @@
+AGRO VALLE V34 — SVG SECTORIZADO + MAPA OFFLINE
+==============================================
+Fecha de preparación: 2026-11-09
+
+CAMBIO PRINCIPAL
+- Los límites, caminos, curvas de nivel y textos ya NO están convertidos a WebP.
+- El original "Proyecto 2026.svg" fue dividido por ubicación real de sus trazados
+  en 35 sectores SVG (1024 unidades cartográficas por sector).
+- La fotografía del original ya era JPEG. Se conserva como JPEG en 140 recortes
+  a 2 píxeles por unidad de mapa, sin convertir la geometría a píxeles.
+- Se mantienen, de forma independiente, cinco imágenes JPEG auxiliares con las
+  tablas que venían incrustadas en el original.
+- En zoom lejano se presenta una vista general JPEG liviana; al acercarse se
+  carga la fotografía detallada y sólo los sectores SVG visibles.
+- Cada sector utiliza las mismas coordenadas del viewBox original 6741 x 4768.
+- No se procesa la cadena XML de 46 MB mediante DOMParser en la pantalla.
+
+ESTRUCTURA DEL PAQUETE
+  index.html              Aplicación, informes y control de jornadas
+  sw.js                   Service Worker para abrir offline
+  manifest.webmanifest    PWA
+  assets/                 Iconos y tipografías locales
+  map-svg/manifest.json   Inventario de recursos cartográficos
+  map-svg/labels.json     Coordenadas de etiquetas para el registro
+  map-svg/vectores/       35 sectores vectoriales SVG
+  map-svg/foto/           140 sectores fotográficos JPEG
+  map-svg/extras/         Cinco JPEG auxiliares del original
+  map-svg/vista-general.jpg
+
+INSTRUCCIONES DE DESPLIEGUE
+1. Publicar TODOS los archivos y carpetas en la MISMA ruta base de Cloudflare
+   Pages o Worker Static Assets; no subir solo index.html ni el ZIP sin extraer.
+2. Para probar primero, usar una URL/entorno de staging, no sobrescribir la
+   versión usada por supervisores con registros importantes.
+3. Confirmar que GET /map-svg/manifest.json devuelva JSON real;
+   /map-svg/vectores/v_3_2.svg sea SVG (image/svg+xml) y
+   /map-svg/foto/f_6_4.jpg sea imagen JPEG (image/jpeg), no HTML de fallback.
+4. Abrir en Safari (iPhone) o Chrome (Android), seleccionar Mapa y esperar que
+   se visualice. Acercar para comprobar líneas y textos nítidos.
+5. Pulsar «Instalar mapa». No abandonar la página durante la descarga.
+   El contador debe completar 184 recursos cartográficos.
+6. Esperar que indique "Mapa instalado" y que esté confirmada la app offline.
+7. En iPhone, usar Compartir > Añadir a pantalla de inicio; luego entrar desde
+   el icono. Hacer una prueba en modo avión, reiniciar y reabrir sin red.
+8. Probar zoom, desplazamiento, seleccionar cuartel, registrar y ver historial.
+9. Compartir el informe con botón WhatsApp (menú de compartir nativo iOS).
+
+DIAGNÓSTICO
+- Botón Reanudar (n/184): hay recursos aún no almacenados; pulsar Reanudar.
+- HTTP 404: no se publicó todo map-svg/ o la ruta del Worker está equivocada.
+- "HTML o SVG/JPEG inválido": el Worker entregó index.html en lugar del archivo.
+- Cuota de almacenamiento: revisar almacenamiento disponible en el navegador.
+- El Service Worker necesita HTTPS y primera descarga con conexión.
+- Ningún navegador garantiza almacenamiento indefinido; mantener respaldos de
+  los registros exportados antes de borrar datos del navegador.
+
+CONSERVACIÓN DEL REGISTRO
+- Se conservan los identificadores de localStorage de la V32/V33. Un despliegue
+  sobre la misma URL/origen puede leer los datos que ya estén en ese navegador.
+- Una URL distinta tiene su propio almacenamiento; no copie registros suponiendo
+  que se trasladarán entre dominios automáticamente.
+- Supabase NO está integrado en esta etapa.
+
+ESTADO DE PRUEBAS
+- Generación y validación de XML SVG/JPEG, inventario, integridad y sintaxis JS.
+- Validación visual en Chromium de sectores raster+vector.
+- Prueba sintética de la inicialización de mapa: 738 etiquetas, carga por zoom.
+- NO validado todavía en iPhone 13 ni en un despliegue público de Cloudflare.
+- Verificar en dispositivo real antes de usar en producción.

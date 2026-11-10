@@ -1,7 +1,7 @@
 /* Agro Valle V34 SVG: app shell + assets offline with Cache Storage */
-const SHELL='agrovalle-shell-v34-svg-ui1';
+const SHELL='agrovalle-shell-v34-svg-ui2';
 const MAP='agrovalle-map-v34-svg';
-const CORE=['./','./index.html','./manifest.webmanifest','./map-svg/manifest.json','./map-svg/labels.json','./map-svg/extras.json','./map-svg/vista-general.jpg','./assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'];
+const CORE=['./','./index.html','./manifest.webmanifest','./map-svg/manifest-v34-2.json','./map-svg/labels.json','./map-svg/extras.json','./map-svg/vista-general.jpg','./assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'];
 self.addEventListener('install',e=>e.waitUntil((async()=>{
  const cache=await caches.open(SHELL);
  for(const u of CORE){

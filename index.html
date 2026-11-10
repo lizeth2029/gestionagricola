@@ -164,6 +164,13 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 #svg-container:active{cursor:grabbing}
 #svg-container svg{overflow:visible;transform-origin:center center;max-width:100%;max-height:100%}
 #svg-container svg *{-webkit-tap-highlight-color:transparent}
+#map-detail-status{position:absolute;right:10px;top:10px;z-index:19;max-width:55%;
+  padding:6px 9px;border-radius:10px;background:rgba(5,15,26,.9);color:#dbeafe;
+  border:1px solid rgba(56,189,248,.35);font-size:10px;font-weight:800;line-height:1.25;
+  pointer-events:none;display:none;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+#map-detail-status[data-state="error"]{color:#fef08a;border-color:#eab308}
+#map-detail-status[data-state="ok"]{color:#86efac;border-color:#22c55e}
+#map-retry-svg{display:none}
 #agro-marker-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
 #svg-container svg path,#svg-container svg text,#svg-container svg tspan{pointer-events:none}
 #svg-container svg image{pointer-events:none}
@@ -420,7 +427,9 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
           </div>
         </div>
 
+        <div id="map-detail-status" role="status" aria-live="polite"></div>
         <div class="map-top">
+          <button id="map-retry-svg" class="btn btn-sm" type="button"><i class="fa-solid fa-arrows-rotate"></i>Reintentar SVG</button>
           <button id="btn-detected" class="btn btn-sm"><i class="fa-solid fa-list-ul"></i>Cuarteles</button>
           <button id="btn-fullscreen" class="btn btn-sm" aria-label="Pantalla completa"><i class="fa-solid fa-expand"></i><span id="fs-label">Pantalla completa</span></button>
         </div>
@@ -741,11 +750,11 @@ function placeMarkers() {
   ctx.clearRect(0, 0, rect.width, rect.height);
   markerScreenBounds.clear();
   if (!sprayerBitmap) return;
-  const matrix = svg.getScreenCTM(); if (!matrix) return;
+  const m=mapMetrics();if(!m)return;
   for (const [id, pos] of markerBounds) {
-    const labelCenter = new DOMPoint(pos.labelCenterX, pos.labelY).matrixTransform(matrix);
-    const labelTop = new DOMPoint(pos.labelCenterX, pos.labelY - pos.labelHeight / 2).matrixTransform(matrix);
-    const labelPx = Math.max(0.1, Math.hypot(labelTop.x - labelCenter.x, labelTop.y - labelCenter.y) * 2);
+    const labelCenter={x:m.left+pos.labelCenterX*m.scale,y:m.top+pos.labelY*m.scale};
+    const labelTop={x:labelCenter.x,y:m.top+(pos.labelY-pos.labelHeight/2)*m.scale};
+    const labelPx=Math.max(.1,pos.labelHeight*m.scale);
     const height = Math.min(64, Math.max(1.5, labelPx * 2.55));
     const width = height * 200 / 250;
     const x = labelCenter.x - rect.left - width / 2;
@@ -814,21 +823,36 @@ function detectLabels() {
     detected.push({ ...n, id });
   }
 }
-function pointInSvg(x, y) { if (!svg) return null; const p = svg.createSVGPoint(); p.x = x; p.y = y; const m = svg.getScreenCTM(); return m ? p.matrixTransform(m.inverse()) : null; }
-function selectAt(x, y) {
+// Los límites transformados de SVG.getScreenCTM() han sido inconsistentes
+// entre versiones de Safari iOS. Usamos el rectángulo visual efectivo.
+function mapMetrics() {
+  if (!svg || !mapManifest) return null;
+  const r=svg.getBoundingClientRect();
+  const w=Number(mapManifest.width),h=Number(mapManifest.height);
+  if (!r.width || !r.height || !w || !h) return null;
+  // preserveAspectRatio="xMidYMid meet": respetar las bandas vacías.
+  const scale=Math.min(r.width/w,r.height/h);
+  return {left:r.left+(r.width-w*scale)/2,top:r.top+(r.height-h*scale)/2,
+    scale,width:w,height:h};
+}
+function pointInSvg(x,y) {
+  const m=mapMetrics();
+  return m ? {x:(x-m.left)/m.scale,y:(y-m.top)/m.scale} : null;
+}
+function selectAt(x,y) {
   if (!svg) return;
-  const p = pointInSvg(x, y); if (!p) return;
-  const m = svg.getScreenCTM(); if (!m) return;
-  const pxPerUnit = Math.hypot(m.a, m.b);
-  const rect = viewport.getBoundingClientRect();
-  for (const [id, b] of markerScreenBounds) {
-    const sx = x - rect.left, sy = y - rect.top;
-    if (sx >= b.x - 5 && sx <= b.x + b.width + 5 && sy >= b.y - 5 && sy <= b.y + b.height + 5) { openModal(id); return; }
+  const p=pointInSvg(x,y),m=mapMetrics();if(!p||!m)return;
+  if(p.x<0||p.y<0||p.x>m.width||p.y>m.height)return;
+  const rect=viewport.getBoundingClientRect();
+  for(const [id,b] of markerScreenBounds){
+    const sx=x-rect.left,sy=y-rect.top;
+    if(sx>=b.x-5&&sx<=b.x+b.width+5&&sy>=b.y-5&&sy<=b.y+b.height+5){openModal(id);return;}
   }
-  let best = null, d = Infinity;
-  for (const c of detected) { const dist = Math.hypot(p.x - c.x, p.y - c.y); if (dist < d) { d = dist; best = c; } }
-  if (best && d * pxPerUnit <= 105) openModal(best.id);
-  else status.textContent = 'Toca cerca del código del cuartel.';
+  let best=null,d=Infinity;
+  for(const c of detected){const dist=Math.hypot(p.x-c.x,p.y-c.y);if(dist<d){d=dist;best=c;}}
+  // Tolerancia en píxeles de pantalla, independiente del zoom.
+  if(best&&d*m.scale<=65){openModal(best.id);return;}
+  status.textContent='Toca cerca del código de un cuartel o usa la lista Cuarteles.';
 }
 
 function applyTransform() {
@@ -847,9 +871,24 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   /* ---------- V34: geometría SVG nativa por sectores + imagen satelital JPG original ---------- */
   let autoSvgLoaded=false, mapManifest=null, mapLabels=null, mapExtras=[];
   let tileLoaded=new Map(), tileGroup=null, vectorGroup=null, extraGroup=null, overviewImage=null;
+  let overviewVectorGroup=null, quickLabelGroup=null, overviewVectorLoading=false,overviewVectorReady=false;
   let tilesFrame=0,mapReady=false,highDetail=false;
+  const vectorElements=new Map(),vectorLoading=new Set(),vectorFailed=new Map();
+  let vectorQueue=[],vectorWorkers=0,detailWanted=new Set(),detailReportTimer=0;
+  const detailStatus=$('map-detail-status'),detailRetry=$('map-retry-svg');
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const MAX_VECTOR_SECTORS=isIOS?8:12; // No cargar el SVG completo en memoria.
+  function reportDetail(message='',state='loading'){
+    clearTimeout(detailReportTimer);
+    detailStatus.textContent=message;
+    detailStatus.dataset.state=state;
+    detailStatus.style.display=message?'block':'none';
+    detailRetry.style.display=state==='error'?'inline-flex':'none';
+    if(state==='ok') detailReportTimer=setTimeout(()=>{detailStatus.style.display='none';},2300);
+  }
   const MAP_VERSION='agrovalle-map-v34-svg';
-  const SHELL_VERSION='agrovalle-shell-v34-svg-ui1';
+  const SHELL_VERSION='agrovalle-shell-v34-svg-ui2';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -867,7 +906,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     })();
   });
   if (logoEl.complete && logoEl.naturalWidth>0) logoEl.dispatchEvent(new Event('load'));
-  const mapUrls=()=>['map-svg/manifest.json',...mapManifest.files];
+  const mapUrls=()=>['map-svg/manifest-v34-2.json',...mapManifest.files];
   const setImage=(el,url)=>{
     // Usamos rutas del mismo origen: compatibles con Service Worker y Cache Storage.
     el.setAttribute('href',url);
@@ -878,7 +917,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     status.textContent='Preparando SVG sectorizado…';
     try{
       const [a,b,c]=await Promise.all([
-        fetch('map-svg/manifest.json'),fetch('map-svg/labels.json'),fetch('map-svg/extras.json')
+        fetch('map-svg/manifest-v34-2.json'),fetch('map-svg/labels.json'),fetch('map-svg/extras.json')
       ]);
       if(!a.ok||!b.ok||!c.ok)throw Error('Faltan archivos del mapa SVG (manifest, etiquetas o imágenes)');
       mapManifest=await a.json();mapLabels=await b.json();mapExtras=await c.json();
@@ -890,7 +929,9 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       tileGroup=node('g',{'pointer-events':'none'});
       vectorGroup=node('g',{'pointer-events':'none'});
       extraGroup=node('g',{'pointer-events':'none'});
-      root.append(overviewImage,tileGroup,vectorGroup,extraGroup);
+      overviewVectorGroup=node('g',{'pointer-events':'none'});
+      quickLabelGroup=node('g',{'pointer-events':'none'});
+      root.append(overviewImage,overviewVectorGroup,tileGroup,vectorGroup,extraGroup,quickLabelGroup);
       svg=root;container.replaceChildren(root);
       detected=[];
       const names=[],areas=[];
@@ -906,6 +947,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
         detected.push({...n,id});
       }
       mapReady=true;autoSvgLoaded=true;reset();scheduleTiles();drawFlags();table();
+      loadOverviewVectors();
       status.textContent=`Mapa SVG listo · ${detected.length} etiquetas. Instálalo una vez para trabajar offline.`;
       updateMapInstallStatus().catch(()=>{});
     }catch(err){
@@ -913,47 +955,228 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       toast('Mapa SVG no disponible: '+(err.message||err),'err');
     }
   }
+  // Capa general vectorial, sin fotografías ni miles de curvas secundarias.
+  // Al acercar se libera y se reemplaza por los sectores SVG originales.
+  async function loadOverviewVectors(){
+    if(overviewVectorLoading||overviewVectorReady||highDetail||!overviewVectorGroup)return;
+    overviewVectorLoading=true;
+    try{
+      const resp=await fetch('map-svg/resumen-vectores.svg');
+      if(!resp.ok)throw Error('HTTP '+resp.status);
+      const doc=new DOMParser().parseFromString(await resp.text(),'image/svg+xml');
+      if(doc.documentElement.localName!=='svg'||doc.querySelector('parsererror'))throw Error('SVG general inválido');
+      doc.querySelectorAll('script,foreignObject').forEach(el=>el.remove());
+      if(highDetail)return;
+      // Los identificadores del SVG general mantienen sus referencias internas.
+      // Los SVG detallados reciben identificadores únicos por sector.
+      const fragment=document.createDocumentFragment();
+      for(const el of [...doc.documentElement.children])fragment.append(document.importNode(el,true));
+      overviewVectorGroup.replaceChildren(fragment);
+      overviewVectorReady=true;
+      status.textContent='Mapa general SVG cargado. Acerca para ver todos los detalles.';
+      reportDetail('Límites SVG ✓','ok');
+    }catch(e){
+      console.warn('No se pudo cargar el SVG general',e);
+      status.textContent='Vista general fotográfica; acerca para cargar los sectores SVG. '+(e.message||e);
+    }finally{overviewVectorLoading=false;}
+  }
+  function renderQuickLabels(m){
+    if(!quickLabelGroup||!detected.length)return;
+    const r=viewport.getBoundingClientRect();
+    const chosen=[];
+    // La imagen JPEG original tiene letras rasterizadas diminutas.
+    // Dibujar códigos y hectáreas en SVG independiente permite leerlos en Safari.
+    const candidates=[];
+    for(const d of detected){
+      const sx=m.left+d.x*m.scale,sy=m.top+d.y*m.scale;
+      if(sx<r.left+18||sx>r.right-18||sy<r.top+45||sy>r.bottom-35)continue;
+      candidates.push({d,sx,sy,dist:Math.hypot(sx-(r.left+r.width/2),sy-(r.top+r.height/2))});
+    }
+    candidates.sort((a,b)=>a.dist-b.dist);
+    for(const c of candidates){
+      if(chosen.some(p=>Math.abs(p.sx-c.sx)<96 && Math.abs(p.sy-c.sy)<46))continue;
+      chosen.push(c);
+      if(chosen.length>=65)break;
+    }
+    const frag=document.createDocumentFragment();
+    const fontSize=11.8/m.scale,areaSize=10.7/m.scale;
+    for(const {d} of chosen){
+      const txt=node('text',{x:d.x,y:d.y,'text-anchor':'middle',
+        'font-family':'Arial,sans-serif','font-size':fontSize,'font-weight':'900',
+        fill:'#f8fafc',stroke:'#101923','stroke-width':2.7/m.scale,'paint-order':'stroke',
+        'stroke-linejoin':'round','pointer-events':'none'});
+      txt.textContent=d.text;frag.append(txt);
+      const ha=data.contornos[d.id]?.ha;
+      if(Number(ha)>0){
+        const area=node('text',{x:d.x,y:d.y+13.5/m.scale,'text-anchor':'middle',
+          'font-family':'Arial,sans-serif','font-size':areaSize,'font-weight':'900',
+          fill:'#facc15',stroke:'#151a20','stroke-width':2.3/m.scale,
+          'paint-order':'stroke','stroke-linejoin':'round','pointer-events':'none'});
+        area.textContent=fmt(ha)+' ha';frag.append(area);
+      }
+    }
+    quickLabelGroup.replaceChildren(frag);
+  }
+  /* V34.2: Safari incorpora sectores vectoriales COMO SVG REAL dentro del
+     documento, no mediante <image href="otro.svg">. Solo los visibles.
+     Cada sector se parsea por separado (máx. ~2 MB), nunca el SVG de 46 MB. */
   function scheduleTiles(){if(tilesFrame)return;tilesFrame=requestAnimationFrame(()=>{tilesFrame=0;updateTiles();});}
   function clearActiveTiles(){
-    for(const e of tileLoaded.values())e.remove();
-    tileLoaded.clear();extraGroup?.replaceChildren();
+    for(const e of tileLoaded.values())e.remove();tileLoaded.clear();
+    for(const e of vectorElements.values())e.remove();vectorElements.clear();
+    detailWanted.clear();vectorQueue=[];extraGroup?.replaceChildren();
   }
+  function clipIdsUnique(element,key){
+    const ids=new Map(),prefix='iossector_'+key.replace(/[^a-z0-9_]/gi,'_')+'_';
+    for(const el of element.querySelectorAll('[id]')){
+      const original=el.getAttribute('id');ids.set(original,prefix+original);
+      el.setAttribute('id',prefix+original);
+    }
+    if(!ids.size)return;
+    for(const el of element.querySelectorAll('*')){
+      for(const attr of [...el.attributes]){
+        let value=attr.value;
+        if((attr.localName==='href')&&value.startsWith('#')){
+          value='#'+(ids.get(value.slice(1))||value.slice(1));
+        }
+        if(value.includes('url('))value=value.replace(/url\(\s*(['"]?)#([^)'"\s]+)\1\s*\)/g,
+          (all,q,id)=>ids.has(id)?`url(#${ids.get(id)})`:all);
+        if(value!==attr.value)el.setAttributeNS(attr.namespaceURI,attr.name,value);
+      }
+    }
+  }
+  function makeInlineVector(xml,key,x,y,w,h){
+    const doc=new DOMParser().parseFromString(xml,'image/svg+xml');
+    const original=doc.documentElement;
+    if(original.localName!=='svg'||doc.querySelector('parsererror'))throw Error('SVG no válido: '+key);
+    // Sanitizar archivos de la cartografía antes de importarlos.
+    doc.querySelectorAll('script,foreignObject').forEach(el=>el.remove());
+    for(const el of original.querySelectorAll('*'))for(const a of [...el.attributes]){
+      if(/^on/i.test(a.name)||(/(?:href)$/i.test(a.name)&&!a.value.startsWith('#')))
+        el.removeAttributeNS(a.namespaceURI,a.localName);
+    }
+    const nested=node('svg',{x,y,width:w,height:h,
+      viewBox:`${x} ${y} ${w} ${h}`,preserveAspectRatio:'none','pointer-events':'none'});
+    nested.setAttribute('data-sector',key);
+    for(const child of [...original.children])nested.appendChild(document.importNode(child,true));
+    clipIdsUnique(nested,key);
+    return nested;
+  }
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  async function loadVectorSector(job){
+    const {key,x,y,w,h}=job;
+    if(vectorElements.has(key)||vectorLoading.has(key)||!detailWanted.has(key))return;
+    vectorLoading.add(key);
+    try{
+      let lastError;
+      for(let attempt=0;attempt<2;attempt++){
+        try{
+          const response=await fetch(`map-svg/vectores/${key}.svg`);
+          if(!response.ok)throw Error('HTTP '+response.status);
+          const xml=await response.text();
+          if(!detailWanted.has(key))return;
+          const el=makeInlineVector(xml,key,x,y,w,h);
+          if(!detailWanted.has(key))return;
+          vectorGroup.append(el);
+          vectorElements.set(key,el);
+          vectorFailed.delete(key);
+          break;
+        }catch(error){lastError=error;if(attempt===0)await wait(250);}
+      }
+      if(!vectorElements.has(key)&&detailWanted.has(key))throw lastError;
+    }catch(e){
+      vectorFailed.set(key,e?.message||String(e));
+      console.warn('No se pudo dibujar el SVG del sector',key,e);
+    }finally{
+      vectorLoading.delete(key);
+      refreshDetailStatus();
+    }
+  }
+  function runVectorQueue(){
+    // Un sector procesándose por vez en iPhone: reduce los picos de RAM.
+    const limit=isIOS?1:2;
+    while(vectorWorkers<limit&&vectorQueue.length){
+      const job=vectorQueue.shift();
+      if(!detailWanted.has(job.key)||vectorElements.has(job.key)||vectorLoading.has(job.key))continue;
+      vectorWorkers++;
+      loadVectorSector(job).finally(()=>{vectorWorkers--;runVectorQueue();});
+    }
+  }
+  function refreshDetailStatus(){
+    if(!highDetail){reportDetail('');return;}
+    const expected=detailWanted.size;
+    if(!expected){reportDetail('');return;}
+    const ready=[...detailWanted].filter(k=>vectorElements.has(k)).length;
+    const errors=[...detailWanted].filter(k=>vectorFailed.has(k));
+    if(errors.length){
+      reportDetail(`SVG: ${ready}/${expected} · Falló ${errors[0]}. Reintentar.`, 'error');
+      status.textContent='No se pudo dibujar un sector vectorial: '+(vectorFailed.get(errors[0])||errors[0]);
+    }else if(ready===expected){reportDetail('SVG nítido ✓','ok');}
+    else reportDetail(`Cargando SVG: ${ready}/${expected}`);
+  }
+  detailRetry.onclick=()=>{
+    for(const key of detailWanted)vectorFailed.delete(key);
+    scheduleTiles();
+  };
   function updateTiles(){
     if(!svg||!mapManifest||!tileGroup||$('av-main').hidden)return;
-    const matrix=svg.getScreenCTM();if(!matrix)return;
-    const ratio=Math.hypot(matrix.a,matrix.b);
-    // Vista general liviana al alejarse; SVG originales y fotografía a 2× al acercarse.
-    const detail=ratio>=0.43;
+    const m=mapMetrics();if(!m)return;
+    const ratio=m.scale;
+    renderQuickLabels(m);
+    const r=viewport.getBoundingClientRect();
+    const minX=Math.max(0,(r.left-m.left)/ratio),maxX=Math.min(m.width,(r.right-m.left)/ratio);
+    const minY=Math.max(0,(r.top-m.top)/ratio),maxY=Math.min(m.height,(r.bottom-m.top)/ratio);
+    function sectorCoords(size,cols,rows){
+      const coords=[];
+      const x0=Math.max(0,Math.floor(minX/size)),x1=Math.min(cols-1,Math.floor((maxX-0.001)/size));
+      const y0=Math.max(0,Math.floor(minY/size)),y1=Math.min(rows-1,Math.floor((maxY-0.001)/size));
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const width=Math.min(size,m.width-x*size),height=Math.min(size,m.height-y*size);
+        coords.push({x,y,w:width,h:height});
+      }
+      return coords;
+    }
+    const vectorCoords=sectorCoords(mapManifest.vectorSize,mapManifest.vectorCols,mapManifest.vectorRows);
+    // Al alejarse tanto que hay que dibujar muchos sectores usamos JPEG liviano,
+    // pero desde un zoom moderado activamos el SVG real sin esperar hasta 0.43.
+    const detail=ratio>=0.105&&vectorCoords.length>0&&vectorCoords.length<=MAX_VECTOR_SECTORS;
     if(detail!==highDetail){
       highDetail=detail;
-      overviewImage.style.display=detail?'none':'';
+      if(detail){
+        overviewVectorGroup?.replaceChildren(); // Liberar RAM para sectores detallados.
+        overviewVectorReady=false;
+      }else{
+        loadOverviewVectors();
+      }
+      clearActiveTiles();
       tileGroup.style.display=detail?'':'none';
       vectorGroup.style.display=detail?'':'none';
       extraGroup.style.display=detail?'':'none';
-      clearActiveTiles();
     }
-    if(!detail)return;
-    const r=viewport.getBoundingClientRect();let inv;
-    try{inv=matrix.inverse();}catch(e){return;}
-    const c=[[r.left,r.top],[r.right,r.top],[r.left,r.bottom],[r.right,r.bottom]].map(([x,y])=>new DOMPoint(x,y).matrixTransform(inv));
-    const minX=Math.min(...c.map(p=>p.x)),maxX=Math.max(...c.map(p=>p.x));
-    const minY=Math.min(...c.map(p=>p.y)),maxY=Math.max(...c.map(p=>p.y));
-    const keep=new Set();
-    function addVisible(kind,size,cols,rows,base,ext,group,pad){
-      const x0=Math.max(0,Math.floor(minX/size)-pad),x1=Math.min(cols-1,Math.floor(maxX/size)+pad);
-      const y0=Math.max(0,Math.floor(minY/size)-pad),y1=Math.min(rows-1,Math.floor(maxY/size)+pad);
-      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-        const key=`${kind}_${x}_${y}`;keep.add(key);
-        if(tileLoaded.has(key))continue;
-        const obj=node('image',{x:x*size,y:y*size,width:Math.min(size,mapManifest.width-x*size),height:Math.min(size,mapManifest.height-y*size),preserveAspectRatio:'none','pointer-events':'none'});
-        setImage(obj,`map-svg/${base}/${kind}_${x}_${y}.${ext}`);
-        group.append(obj);tileLoaded.set(key,obj);
-      }
+    if(!detail){reportDetail('');return;}
+    const keepImages=new Set();
+    for(const {x,y,w,h} of sectorCoords(mapManifest.photoSize,mapManifest.photoCols,mapManifest.photoRows)){
+      const key=`f_${x}_${y}`;keepImages.add(key);
+      if(tileLoaded.has(key))continue;
+      const img=node('image',{x:x*mapManifest.photoSize,y:y*mapManifest.photoSize,width:w,height:h,
+        preserveAspectRatio:'none','pointer-events':'none'});
+      setImage(img,`map-svg/foto/${key}.jpg`);
+      tileGroup.append(img);tileLoaded.set(key,img);
     }
-    addVisible('f',mapManifest.photoSize,mapManifest.photoCols,mapManifest.photoRows,'foto','jpg',tileGroup,0);
-    addVisible('v',mapManifest.vectorSize,mapManifest.vectorCols,mapManifest.vectorRows,'vectores','svg',vectorGroup,0);
-    for(const [key,el] of tileLoaded){if(!keep.has(key)){el.remove();tileLoaded.delete(key);}}
-    // Las tablas JPEG incrustadas en el SVG original son recursos aparte, no parte de la fotografía.
+    for(const [key,el] of tileLoaded)if(!keepImages.has(key)){el.remove();tileLoaded.delete(key);}
+    const wanted=new Set(vectorCoords.map(({x,y})=>`v_${x}_${y}`));
+    detailWanted=wanted;
+    for(const [key,el] of vectorElements)if(!wanted.has(key)){el.remove();vectorElements.delete(key);}
+    vectorQueue=vectorQueue.filter(job=>wanted.has(job.key));
+    const jobs=vectorCoords.map(({x,y,w,h})=>({key:`v_${x}_${y}`,x:x*mapManifest.vectorSize,y:y*mapManifest.vectorSize,w,h}));
+    // Prioridad al centro de pantalla, donde suele tocar el supervisor.
+    const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2;
+    jobs.sort((a,b)=>Math.hypot(a.x+a.w/2-centerX,a.y+a.h/2-centerY)-
+      Math.hypot(b.x+b.w/2-centerX,b.y+b.h/2-centerY));
+    const queued=new Set(vectorQueue.map(j=>j.key));
+    for(const job of jobs)if(!vectorElements.has(job.key)&&!vectorLoading.has(job.key)&&
+       !queued.has(job.key)&&!vectorFailed.has(job.key))vectorQueue.push(job);
+    runVectorQueue();
     extraGroup.replaceChildren();
     for(const item of mapExtras){
       const [x0,y0,x1,y1]=item.bbox;
@@ -962,6 +1185,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       const img=node('image',{width:item.width,height:item.height,preserveAspectRatio:'none','pointer-events':'none'});
       setImage(img,item.file);g.append(img);extraGroup.append(g);
     }
+    refreshDetailStatus();
   }
   const installFeedback = $('map-install-feedback');
   const installLabel = $('install-map-label');

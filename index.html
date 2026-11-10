@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>Agro Valle V34 · SVG offline</title>
+<title>GESTION AGRICOLA · Mapa Offline</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#04080f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -63,15 +63,21 @@ body.agro-fullscreen #agro-modal{z-index:150}
   width:3px;height:26px;border-radius:3px;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
 .rail-foot{margin-top:auto}
 
-/* topbar */
-.topbar{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:12px 18px;
+/* Cabecera V34.1: marca a la izquierda; conexión e instalación ancladas a la derecha. */
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;gap:12px;padding:12px 18px;
   border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(9,17,29,.92),rgba(5,11,19,.6));
   backdrop-filter:blur(16px);flex-shrink:0}
-.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-copy{min-width:0;flex:1}
+.brand-logo{display:block;width:40px;height:40px;flex:none;object-fit:contain;padding:3px;border-radius:12px;
+  background:rgba(255,255,255,.94);border:1px solid rgba(52,211,153,.5)}
 .brand h1{margin:0;font-size:15px;font-weight:800;letter-spacing:.2px;white-space:nowrap;
   background:linear-gradient(92deg,#e8f1fb,#7dd3fc 60%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
 .brand p{margin:1px 0 0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#64748b}
-.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top-actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;
+  margin-left:auto;min-width:0;white-space:nowrap}
+.top-actions .pill{justify-content:center}
+#install-map{white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;padding:6px 11px;
   border-radius:999px;border:1px solid var(--line);color:#9fd8e8;background:rgba(34,211,238,.07)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);animation:pulse 2.2s infinite}
@@ -260,15 +266,28 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
   .rail-sep,.rail-foot,.brand-mark{display:none}
   .av-tab.active::before{left:50%;top:auto;bottom:-8px;transform:translateX(-50%);width:24px;height:3px}
   .stage{order:1}
-  .topbar{padding:10px 12px}
-  .brand h1{font-size:13px}
+  .topbar{grid-template-columns:minmax(0,1fr) max-content;gap:7px;padding:9px 9px 9px 11px}
+  .brand{gap:7px}
+  .brand-logo{width:35px;height:35px;padding:2px;border-radius:10px}
+  .brand h1{font-size:clamp(11px,3.2vw,13px);line-height:1.15;white-space:normal;overflow-wrap:normal}
   .brand p{display:none}
+  .top-actions{gap:5px;align-items:flex-end}
+  .top-actions .pill{font-size:9px;padding:5px 7px;gap:5px}
+  .top-actions .dot{width:6px;height:6px}
+  #install-map{font-size:9.5px;padding:6px 7px;gap:5px;box-shadow:none}
   #av-report,#av-history{padding:12px}
   #av-main{padding:8px}
   #detected-panel{width:200px;bottom:64px}
   .legend{font-size:9.5px;gap:9px;padding:7px 9px}
   .form-grid{grid-template-columns:1fr}
   .f.col-2{grid-column:span 1}
+}
+@media (max-width:360px){
+  .topbar{gap:5px;padding-left:7px;padding-right:7px}
+  .brand-logo{width:31px;height:31px}
+  .brand h1{font-size:10.5px}
+  .top-actions .pill{font-size:8px;padding:4px 5px}
+  #install-map{font-size:9px;padding:5px 5px}
 }
 </style>
 </head>
@@ -285,17 +304,18 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V33.1 HD Offline</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.1 SVG</span></div>
   </aside>
 
   <div class="stage">
     <header class="topbar">
       <div class="brand">
-        <div style="width:36px;height:36px;border-radius:12px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.5);display:grid;place-items:center;color:#6ee7b7;flex-shrink:0">
-          <i class="fa-solid fa-tractor" style="font-size:13px"></i>
-        </div>
-        <div style="min-width:0">
-          <h1>Agro Valle · Consola de Supervisión</h1>
+        <img id="gestion-logo" class="brand-logo"
+             src="https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png"
+             alt="Logo de Gestión Agrícola" width="40" height="40"
+             referrerpolicy="no-referrer">
+        <div class="brand-copy">
+          <h1>GESTION AGRICOLA</h1>
           <p>Control de aplicaciones por cuartel</p>
         </div>
       </div>
@@ -829,7 +849,24 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   let tileLoaded=new Map(), tileGroup=null, vectorGroup=null, extraGroup=null, overviewImage=null;
   let tilesFrame=0,mapReady=false,highDetail=false;
   const MAP_VERSION='agrovalle-map-v34-svg';
-  const SHELL_VERSION='agrovalle-shell-v34-svg';
+  const SHELL_VERSION='agrovalle-shell-v34-svg-ui1';
+  const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
+  const logoEl=$('gestion-logo');
+  logoEl.addEventListener('error',()=>{
+    if (!logoEl.src.endsWith('/assets/icon-192.png')) logoEl.src='./assets/icon-192.png';
+  });
+  logoEl.addEventListener('load',()=>{
+    if (!logoEl.src.startsWith(LOGO_URL) || !('caches' in window)) return;
+    // Guardar el logo externo tras su primera descarga para mostrarlo sin red.
+    (async()=>{
+      try {
+        const cache=await caches.open(SHELL_VERSION);
+        const req=new Request(LOGO_URL,{mode:'no-cors',credentials:'omit',referrerPolicy:'no-referrer'});
+        if(!await cache.match(req)) await cache.put(req,await fetch(req));
+      } catch(e){ /* El logo es opcional; los registros y el mapa siguen funcionando. */ }
+    })();
+  });
+  if (logoEl.complete && logoEl.naturalWidth>0) logoEl.dispatchEvent(new Event('load'));
   const mapUrls=()=>['map-svg/manifest.json',...mapManifest.files];
   const setImage=(el,url)=>{
     // Usamos rutas del mismo origen: compatibles con Service Worker y Cache Storage.
@@ -948,7 +985,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     for (const u of urls) if (await cache.match(u)) ready++;
     if (installingMap) return;
     installLabel.textContent = ready===urls.length ? 'Mapa instalado ✓' : ready ? `Reanudar (${ready}/${urls.length})` : 'Instalar mapa';
-    if (ready===urls.length) mapInstallMessage('Mapa SVG completo en este dispositivo. Haz la prueba en modo avión antes de trabajar en terreno.');
+    if (ready===urls.length) mapInstallMessage('');
   }
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function downloadAndVerify(u, cache) {
@@ -1026,8 +1063,9 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       const hasShell=!!reg?.active && checks.every(Boolean);
       if(hasShell){
         installLabel.textContent='Mapa instalado ✓';
-        mapInstallMessage(`Instalación terminada: ${verified}/${urls.length} recursos del plano y aplicación offline verificados. Prueba el modo avión.`);
-        toast('Mapa SVG y aplicación instalados para uso offline','ok');
+        // Cuando el mapa está instalado, basta el estado compacto del botón.
+        // Ocultar el aviso extenso sin afectar los errores ni el progreso de descarga.
+        mapInstallMessage('');
         // Eliminar versiones antiguas solo cuando la nueva está completa.
         for(const key of await caches.keys()){
           if((key.startsWith('agrovalle-map-v33-')||key.startsWith('agrovalle-map-v34-'))&&key!==MAP_VERSION)

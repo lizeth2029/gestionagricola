@@ -1,0 +1,25 @@
+GESTION AGRICOLA V34.3 — ETIQUETAS ORIGINALES SVG
+
+CAMBIOS
+- Elimina TODAS las etiquetas de cuarteles/hectáreas superpuestas de V34.2.
+- Recupera los textos originales del SVG, con sus tamaños y colores.
+- Vista general: fotografía JPEG limpia + SVG con nombres y límites originales.
+- Vista cercana: fotografías JPEG de detalle + sectores SVG vectoriales originales.
+- Registro táctil, historial, informes, WhatsApp y almacenamiento local se conservan.
+- Las nuevas rutas evitan la caché antigua de la vista general.
+
+ACTUALIZACIÓN GITHUB
+Copia los archivos del ZIP pequeño preservando rutas:
+  index.html
+  sw.js
+  map-svg/manifest-v34-3.json
+  map-svg/resumen-vectores-original.svg
+  map-svg/vista-general-satelital.jpg
+
+NO BORRES los archivos existentes de /map-svg/vectores/ ni /map-svg/foto/.
+NO BORRES datos del navegador: los registros se guardan localmente.
+Cloudflare Pages publicará los archivos; tras la publicación abre Safari con red
+y cierra/abre la aplicación para actualizar el Service Worker. El mapa debe
+instalar los NUEVOS recursos offline antes de probar modo avión.
+
+La pantalla de iPhone real y WhatsApp requieren verificación física.

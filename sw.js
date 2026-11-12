@@ -1,14 +1,22 @@
 /* Agro Valle V34 SVG: app shell + assets offline with Cache Storage */
-const SHELL='agrovalle-shell-v34-svg-ui3';
-const MAP='agrovalle-map-v34-svg';
-const CORE=['./','./index.html','./manifest.webmanifest','./map-svg/manifest-v34-3.json','./map-svg/labels.json','./map-svg/extras.json','./map-svg/vista-general-satelital.jpg','./assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'];
+const SHELL='agrovalle-shell-v34-4-precision';
+const MAP='agrovalle-map-v34-4-precision';
+const CORE=['./','./index.html','./manifest.webmanifest','./map-svg/manifest-v34-4.json','./map-svg/cuarteles-fuente-v34-4.json','./map-svg/labels.json','./map-svg/extras.json','./map-svg/vista-general-satelital.jpg','./assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'];
 self.addEventListener('install',e=>e.waitUntil((async()=>{
+ // No activar una versión nueva si faltan archivos esenciales: conservar
+ // el Service Worker anterior evita la pantalla blanca al perder señal.
  const cache=await caches.open(SHELL);
- for(const u of CORE){
-  try{const r=await fetch(u,{cache:'reload'});if(!r.ok)throw Error(`HTTP ${r.status}`);await cache.put(u,r);}
-  catch(err){/* Installation may be resumed when network returns. */}
+ try{
+  for(const u of CORE){
+   const r=await fetch(u,{cache:'reload'});
+   if(!r.ok)throw Error(`Recurso esencial ${u} HTTP ${r.status}`);
+   await cache.put(u,r);
+  }
+  await self.skipWaiting();
+ } catch(err){
+  await caches.delete(SHELL);
+  throw err;
  }
- await self.skipWaiting();
 })()));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
  await self.clients.claim();

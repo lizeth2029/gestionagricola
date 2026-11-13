@@ -304,6 +304,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
   .top-actions .pill{font-size:8px;padding:4px 5px}
   #install-map{font-size:9px;padding:5px 5px}
 }
+#audit-notice[hidden],#rep-date-override[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -319,7 +320,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.3 SVG</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.6 SVG</span></div>
   </aside>
 
   <div class="stage">
@@ -344,10 +345,10 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 
     <!-- ===== PANEL ===== -->
     <section id="av-report" class="view" hidden>
-      <div id="audit-notice" role="alert" style="margin:0 0 12px;padding:12px;border-radius:12px;border:1px solid rgba(251,191,36,.55);background:#211b12;color:#fde68a;font-size:12px;line-height:1.5">Verificando superficies del plano original…</div>
+      <div id="audit-notice" role="alert" aria-live="assertive" hidden style="margin:0 0 12px;padding:12px;border-radius:12px;border:1px solid rgba(251,191,36,.55);background:#211b12;color:#fde68a;font-size:12px;line-height:1.5"></div>
       <div class="kpis">
-        <div class="kpi c1"><label>Cuarteles hoy</label><strong id="kpi-cuarteles">0</strong></div>
-        <div class="kpi c2"><label>Hectáreas hoy</label><strong id="kpi-ha">0,00<span class="u">ha</span></strong></div>
+        <div class="kpi c1"><label>Cuarteles jornada</label><strong id="kpi-cuarteles">0</strong></div>
+        <div class="kpi c2"><label>Hectáreas jornada</label><strong id="kpi-ha">0,00<span class="u">ha</span></strong></div>
         <div class="kpi c3"><label>Personal</label><strong id="kpi-personal">0</strong></div>
         <div class="kpi c4"><label>Jornadas guardadas</label><strong id="kpi-jornadas">0</strong></div>
       </div>
@@ -363,7 +364,12 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
             <div class="f col-2"><label for="rep-company">Empresa</label><input id="rep-company" class="av-input" value="AGRO VALLE ESCONDIDO SPA"></div>
             <div class="f col-2"><label for="rep-contractor">Contratista</label><input id="rep-contractor" class="av-input" value="PABLO CORNEJO"></div>
             <div class="f col-2"><label for="rep-supervisor">Supervisor</label><input id="rep-supervisor" class="av-input" value="Juan Pablo"></div>
-            <div class="f"><label for="rep-date">Fecha de jornada (hora local del teléfono)</label><input id="rep-date" type="date" class="av-input"></div>
+            <div class="f"><label for="rep-date">Fecha de jornada (puedes seleccionar una fecha anterior)</label><input id="rep-date" type="date" class="av-input" required>
+              <div id="rep-date-override" hidden style="margin-top:7px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:#fde68a;font-size:11.5px">
+                <span><i class="fa-solid fa-calendar-check"></i> Fecha elegida manualmente para registrar esta jornada</span>
+                <button id="rep-date-today" type="button" class="btn btn-sm" style="padding:5px 9px;font-size:11px">Volver a hoy</button>
+              </div>
+            </div>
             <div class="f"><label for="rep-sector">Sector</label><input id="rep-sector" class="av-input" value="Palto"></div>
             <div class="f"><label for="rep-people">Personal (personas)</label><input id="rep-people" type="number" min="0" step="1" class="av-input" value="10"></div>
             <div class="f"><label for="rep-farm">Predio</label><input id="rep-farm" class="av-input" value="Fundo Arrayyanes"></div>
@@ -532,6 +538,7 @@ const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
 const STORE = 'agrovalle_svg_registros_v1';
 const REPORT_STORE = 'agrovalle_informe_jornada_v1';
+const WORK_DATE_STORE = 'gestion_agricola_fecha_manual_v34_6';
 const JORNADAS_STORE = 'agrovalle_jornadas_v1';
 const viewport = $('map-viewport'), container = $('svg-container'), status = $('info-status');
 
@@ -615,13 +622,13 @@ function mustBeAudited(rows, context) {
 }
 function updateAuditNotice() {
   const notice=$('audit-notice');if(!notice)return;
-  if(!sourceCatalogReady){notice.hidden=false;notice.textContent='Verificando superficies del plano original. No se permite registrar ni enviar informes hasta completar la validación.';return;}
+  if(!sourceCatalogReady){notice.hidden=!sourceCatalogError;notice.textContent=sourceCatalogError?'⚠ No se pudo comprobar el catálogo del SVG: '+sourceCatalogError+' El registro está bloqueado.':'';return;}
   const active=auditRows(Object.values(data.registros));
   const archives=Object.values(loadJornadas()).flatMap(j=>Array.isArray(j?.detalle)?j.detalle:[]);
   const old=auditRows(archives);
   const all=[...active,...old];
   if(all.length){notice.hidden=false;notice.textContent='⚠ AUDITORÍA OBLIGATORIA: '+all.length+' registro(s) activo(s) o archivado(s) sin concordancia con el SVG. No se modificarán automáticamente. Revisa el respaldo y corrige antes de compartir informes. '+all.slice(0,3).map(p=>p.name+': '+p.reason).join(' | ');}
-  else{notice.hidden=false;notice.textContent='✓ Catálogo SVG comprobado. Los dos P-59 se registran por ID geográfico y superficie, sin mezclarse.';}
+  else{notice.hidden=true;notice.textContent='';}
 }
 async function loadSourceCatalog() {
   if(sourceCatalogReady)return true;
@@ -667,11 +674,16 @@ function save() {
 function loadJornadas() { try { return JSON.parse(localStorage.getItem(JORNADAS_STORE) || '{}'); } catch (e) { return {}; } }
 function saveJornadas(o) { try { localStorage.setItem(JORNADAS_STORE, JSON.stringify(o)); return true; } catch (e) { return false; } }
 let historicalPanel = null; // Vista de solo lectura: no mezcla jornadas archivadas con el mapa activo.
-function clearHistoricalPanel() { historicalPanel = null; }
+function clearHistoricalPanel(restoreWorkingDate=true) {
+  // Al consultar una jornada archivada se muestra su fecha sólo en modo lectura.
+  // Cuando se vuelve al trabajo activo, recuperar la selección anterior.
+  if(historicalPanel && restoreWorkingDate) $('rep-date').value=selectedWorkDate;
+  historicalPanel=null;
+}
 
 function refreshKPIs() {
-  const today = localDay();
-  const hoy = Object.values(data.registros).filter(r => r.fecha === today);
+  const workDate = selectedWorkDate;
+  const hoy = Object.values(data.registros).filter(r => r.fecha === workDate);
   $('kpi-cuarteles').textContent = hoy.length;
   $('kpi-ha').textContent = auditRows(hoy).length ? 'REVISAR' : fmt(hoy.reduce((n,r)=>n+Number(r.ha),0))+' ha';
   $('kpi-personal').textContent = Number($('rep-people').value) || 0;
@@ -762,12 +774,13 @@ $('modal-yes').onclick=()=>{
   if(modalWorking||!modalId||!$('modal-confirm').checked||performance.now()-modalOpenedAt<650)return;
   const id=modalId,c=data.contornos[id],src=validSourceById(id,c?.name);
   if(data.registros[id]||!sourceCatalogReady||!src){toast('REGISTRO BLOQUEADO: ubicación no verificada','err');return;}
-  const ha=Number(src.hectareas),today=localDay();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(today)||!Number.isFinite(ha)||ha<=0){toast('Fecha o superficie inválidas','err');return;}
+  // La fecha de TRABAJO es la seleccionada; registradoEn conserva el sello real.
+  // Nunca sustituir aquí una jornada retroactiva por el día actual.
+  const ha=Number(src.hectareas),workDate=selectedWorkDate;
+  if(!validWorkDate(workDate)||!Number.isFinite(ha)||ha<=0){toast('Selecciona una fecha de jornada válida (no futura)','err');return;}
   modalWorking=true;$('modal-yes').disabled=true;
-  if(rep('date').value!==today){rep('date').value=today;clearHistoricalPanel();persistReport();}
   const previous=data.registros[id];
-  data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:today,
+  data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
     catalogo:'v34-5-ubicaciones-svg-2026',origenSHA256:SOURCE_SVG_HASH,registradoEn:new Date().toISOString()};
   if(!save()){
     if(previous)data.registros[id]=previous;else delete data.registros[id];
@@ -1044,7 +1057,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // La cartografía es idéntica: reutilizar caché de V34.4 y agregar sólo el catálogo y manifest nuevos.
   const MAP_VERSION='agrovalle-map-v34-4-precision';
-  const SHELL_VERSION='agrovalle-shell-v34-5-ubicaciones';
+  const SHELL_VERSION='agrovalle-shell-v34-6-fecha-manual';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1569,20 +1582,72 @@ const mixtures = {
   '2000-ripper': '2.000 L (40 kg RipperMax + 2 L Nitrofix)'
 };
 const rep = id => $('rep-' + id);
-rep('date').value = localDay();
+// La fecha corresponde al TRABAJO realizado, no necesariamente al día del registro.
+// El sello registradoEn/savedAt identifica por separado cuándo se ingresó el dato.
+// Un cambio manual se conserva si Safari recarga por falta de señal o presión de RAM.
+function validWorkDate(date){
+  if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>localDay())return false;
+  const [year,month,day]=date.split('-').map(Number);
+  const d=new Date(year,month-1,day);
+  return d.getFullYear()===year && d.getMonth()===month-1 && d.getDate()===day;
+}
+let selectedWorkDate=localDay(), manualWorkDate=false;
+rep('date').max=localDay();
+try{
+  const draft=JSON.parse(localStorage.getItem(WORK_DATE_STORE)||'null');
+  if(draft?.manual&&validWorkDate(draft.date)&&draft.date!==localDay()){
+    selectedWorkDate=draft.date; manualWorkDate=true;
+  }else if(draft){localStorage.removeItem(WORK_DATE_STORE);}
+}catch(e){}
+rep('date').value=selectedWorkDate;
 try {
   const saved = JSON.parse(localStorage.getItem(REPORT_STORE) || '{}');
   for (const id of repIds) if (id !== 'date' && typeof saved[id] === 'string') rep(id).value = saved[id];
 } catch (e) {}
-// Fecha del dispositivo: refrescar al cambiar de día, al recuperar Safari y al abrir el mapa.
-let checkedLocalDay=localDay();
-function syncLocalDate(force=false){
-  const today=localDay();
-  if(force||today!==checkedLocalDay){
-    checkedLocalDay=today; rep('date').value=today;clearHistoricalPanel();
-    renderReportRows();refreshKPIs();
-    if(force)toast('Fecha de trabajo: '+today,'ok');
+function updateWorkDateHint(){
+  $('rep-date-override').hidden=!manualWorkDate;
+  // Limitar el selector al día actual no impide fechas anteriores.
+  rep('date').max=localDay();
+}
+function persistWorkDate(){
+  try{
+    if(manualWorkDate)localStorage.setItem(WORK_DATE_STORE,JSON.stringify({manual:true,date:selectedWorkDate,seleccionadaEn:new Date().toISOString()}));
+    else localStorage.removeItem(WORK_DATE_STORE);
+    return true;
+  }catch(e){
+    rep('message').textContent='No se pudo guardar la fecha elegida para una reapertura. Haz un respaldo antes de cerrar Safari.';
+    return false;
   }
+}
+function selectWorkDate(date){
+  if(!validWorkDate(date)){
+    rep('date').value=selectedWorkDate;
+    toast('Fecha inválida: selecciona hoy o un día anterior','err');
+    return false;
+  }
+  clearHistoricalPanel(false);
+  selectedWorkDate=date;
+  manualWorkDate=date!==localDay();
+  rep('date').value=date;
+  persistWorkDate();updateWorkDateHint();
+  renderReportRows();refreshKPIs();
+  return true;
+}
+updateWorkDateHint();
+// Cambio de día: sólo actualizar automáticamente mientras se está en modo HOY.
+// No pisar nunca una fecha anterior que el supervisor eligió expresamente.
+let checkedLocalDay=localDay();
+function syncLocalDate(){
+  const today=localDay();
+  if(today!==checkedLocalDay){
+    checkedLocalDay=today;
+    if(!manualWorkDate){
+      selectedWorkDate=today;
+      if(!historicalPanel){rep('date').value=today;renderReportRows();}
+    }
+    refreshKPIs();
+  }
+  updateWorkDateHint();
 }
 window.addEventListener('pageshow',()=>syncLocalDate());
 window.addEventListener('focus',()=>syncLocalDate());
@@ -1593,7 +1658,9 @@ const persistReport = () => {
   catch (e) { rep('message').textContent = 'No se pudieron guardar las preferencias del informe.'; }
 };
 function toggleCustom() { rep('custom-wrap').hidden = rep('mixture').value !== 'other'; }
-for (const id of repIds) rep(id).addEventListener('change', () => { clearHistoricalPanel(); persistReport(); toggleCustom(); renderReportRows(); refreshKPIs(); });
+for (const id of repIds.filter(id=>id!=='date')) rep(id).addEventListener('change', () => { clearHistoricalPanel(); persistReport(); toggleCustom(); renderReportRows(); refreshKPIs(); });
+rep('date').addEventListener('change',()=>selectWorkDate(rep('date').value));
+$('rep-date-today').addEventListener('click',()=>selectWorkDate(localDay()));
 rep('custom').addEventListener('input', persistReport);
 toggleCustom();
 
@@ -1626,7 +1693,7 @@ function renderReportRows() {
 
 function reportText() {
   const date = rep('date').value;
-  if (!date) throw Error('Selecciona la fecha.');
+  if (!validWorkDate(date)) throw Error('Selecciona una fecha válida, igual o anterior al día de hoy.');
   const rows = historicalPanel ? historicalPanel.rows : datedRows();
   if (!rows.length) throw Error('No hay cuarteles registrados en la fecha seleccionada.');
   const issues=auditRows(rows);if(issues.length)throw Error('Informe BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
@@ -1678,7 +1745,7 @@ rep('whatsapp-btn').onclick = () => withReport(text => {
 /* ---------- guardar jornada ---------- */
 $('rep-save-btn').onclick = () => {
   const date = rep('date').value;
-  if (!date) { rep('message').textContent = 'Selecciona la fecha.'; toast('Selecciona la fecha', 'warn'); return; }
+  if (!validWorkDate(date)) { rep('message').textContent = 'Selecciona una fecha válida (no futura).'; toast('Fecha de jornada inválida', 'warn'); return; }
   if (historicalPanel) { rep('message').textContent = 'Estás consultando una jornada archivada. Vuelve al registro activo para guardar otra.'; toast('Jornada histórica: solo consulta', 'warn'); return; }
   const rows = datedRows();
   if (!rows.length) { rep('message').textContent = 'No hay cuarteles registrados en esta fecha.'; toast('No hay cuarteles en esa fecha', 'warn'); return; }
@@ -1698,7 +1765,7 @@ $('rep-save-btn').onclick = () => {
     people: Number(rep('people').value) || 0,
     mixture: mix,
     cuarteles: rows.length,
-    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,ha: Number(r.ha) || 0,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })),
+    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,ha: Number(r.ha) || 0,registradoEn:r.registradoEn||null,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })),
     total,
     savedAt: new Date().toISOString()
   };
@@ -1728,6 +1795,8 @@ $('rep-save-btn').onclick = () => {
   drawFlags();table();
   // Mantener los datos de trabajo: solo se limpian hectáreas y marcadores.
   clearHistoricalPanel();
+  // Tras archivar una jornada retroactiva, preparar automáticamente la próxima para HOY.
+  selectWorkDate(localDay());
   persistReport();
   rep('preview').hidden = true; rep('preview').textContent = '';
   rep('message').textContent = 'Jornada del ' + date + ' guardada. Cuarteles limpiados; datos del supervisor conservados.';
@@ -1986,7 +2055,8 @@ function switchTab(name) {
   if (name === 'historial') renderHistory();
   if (name === 'mapa') {
     syncLocalDate();
-    if(rep('date').value!==localDay()){rep('date').value=localDay();clearHistoricalPanel();renderReportRows();}
+    // Salir de una consulta histórica recupera la fecha de trabajo elegida.
+    if(historicalPanel){clearHistoricalPanel();renderReportRows();}
     if (!mapReady) initMap();
     else requestAnimationFrame(() => { scheduleTransform(); deferMarkers(); scheduleTiles(); });
   }
@@ -1994,7 +2064,7 @@ function switchTab(name) {
 }
 document.querySelectorAll('[data-av-tab]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.avTab)));
 $('av-go-map').addEventListener('click', () => {
-  if (!rep('date').value) { rep('message').textContent = 'Selecciona la fecha antes de continuar.'; toast('Selecciona la fecha', 'warn'); return; }
+  if (!validWorkDate(selectedWorkDate)) { rep('message').textContent = 'Selecciona una fecha de trabajo válida.'; toast('Fecha de jornada inválida', 'warn'); return; }
   clearHistoricalPanel(); renderReportRows(); persistReport(); switchTab('mapa');
 });
 

@@ -1,5 +1,5 @@
 /* Agro Valle V34 SVG: app shell + assets offline with Cache Storage */
-const SHELL='agrovalle-shell-v34-5-ubicaciones';
+const SHELL='agrovalle-shell-v34-6-fecha-manual';
 // Mantener el caché de la fotografía y 35 SVG originales: sólo cambia el catálogo.
 const MAP='agrovalle-map-v34-4-precision';
 const CORE=['./','./index.html','./manifest.webmanifest','./map-svg/manifest-v34-5.json','./map-svg/cuarteles-fuente-v34-5.json','./map-svg/labels.json','./map-svg/extras.json','./map-svg/vista-general-satelital.jpg','./assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'];

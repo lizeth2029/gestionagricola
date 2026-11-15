@@ -1,6 +1,6 @@
-/* GESTION AGRICOLA V34.9: shell offline + caché independiente por mapa.
+/* GESTION AGRICOLA V34.10: historial visual, modo sol y favicon local.
    Los metadatos versionados se actualizan al activar el SW; los mosaicos ya instalados se conservan. */
-const SHELL='agrovalle-shell-v34-9-multi-map';
+const SHELL='agrovalle-shell-v34-10-history-visual';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './','./index.html','./manifest.webmanifest','./maps/catalog.json',
@@ -9,7 +9,7 @@ const CORE=[
   './maps/paltos-caseta-2-y-3/manifest.json','./maps/paltos-caseta-2-y-3/cuarteles-fuente.json','./maps/paltos-caseta-2-y-3/labels.json',
   './maps/paltos-sector-7/manifest.json','./maps/paltos-sector-7/cuarteles-fuente.json','./maps/paltos-sector-7/labels.json',
   './maps/paltos-sector-8/manifest.json','./maps/paltos-sector-8/cuarteles-fuente.json','./maps/paltos-sector-8/labels.json',
-  './assets/icon-192.png','./assets/icon-512.png','./assets/fontawesome/css/all.min.css',
+  './assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico','./assets/fontawesome/css/all.min.css',
   './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2'
 ];
 self.addEventListener('install',event=>event.waitUntil((async()=>{

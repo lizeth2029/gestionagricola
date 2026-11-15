@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.8 Multi-mapa</title>
+<title>GESTION AGRICOLA · V34.9 Multi-mapa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#04080f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -320,7 +320,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.8 MAPAS</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.9 MULTI-MAPA</span></div>
   </aside>
 
   <div class="stage">
@@ -337,7 +337,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
       </div>
       <div class="top-actions">
         <span class="pill"><span class="dot"></span><span id="sync-label">Sesión local</span></span>
-        <button type="button" id="install-map" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i><span id="install-map-label">Instalar mapa</span></button>
+        <button type="button" id="install-map" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i><span id="install-map-label">Instalar todos los mapas</span></button>
       </div>
     </header>
 
@@ -549,18 +549,32 @@ const ACTIVE_MAP_STORE = 'agrovalle_mapa_activo_v34_8';
 let activeMapId='proyecto-2026';
 try{activeMapId=localStorage.getItem(ACTIVE_MAP_STORE)||'proyecto-2026';}catch(e){}
 let STORE=STORE_BASE,REPORT_STORE=REPORT_STORE_BASE,WORK_DATE_STORE=WORK_DATE_STORE_BASE,JORNADAS_STORE=JORNADAS_STORE_BASE;
+function storeKeyForMap(mapId){return STORE_BASE+(mapId==='proyecto-2026'?'':'__'+mapId);}
 function setStorageKeys(mapId){
   const suffix=mapId==='proyecto-2026'?'':'__'+mapId;
   STORE=STORE_BASE+suffix;REPORT_STORE=REPORT_STORE_BASE+suffix;
-  WORK_DATE_STORE=WORK_DATE_STORE_BASE+suffix;JORNADAS_STORE=JORNADAS_STORE_BASE+suffix;
+  WORK_DATE_STORE=WORK_DATE_STORE_BASE+suffix;JORNADAS_STORE=JORNADAS_STORE_BASE; // Historial global, separado por mapId.
 }
 setStorageKeys(activeMapId);
-function readStoredMapData(){
+function readStoredMapDataForMap(mapId){
   const empty={contornos:{},registros:{},poligonos:{}};
-  try{const saved=JSON.parse(localStorage.getItem(STORE));
+  try{const saved=JSON.parse(localStorage.getItem(storeKeyForMap(mapId)));
     if(saved?.registros&&saved?.contornos)return {...empty,...saved};
   }catch(e){}
   return empty;
+}
+function readStoredMapData(){return readStoredMapDataForMap(activeMapId);}
+function mapNameForId(mapId){return mapRegistry?.find(m=>m.id===mapId)?.name||mapId||'Proyecto 2026';}
+function collectAllActiveRows(){
+  const ids=new Set(['proyecto-2026',...(mapRegistry||[]).map(m=>m.id)]);
+  try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key===STORE_BASE)ids.add('proyecto-2026');else if(key?.startsWith(STORE_BASE+'__'))ids.add(key.slice((STORE_BASE+'__').length));}}catch(e){}
+  const out=[];
+  for(const mapId of ids){
+    const saved=readStoredMapDataForMap(mapId);
+    const rows=mapId===activeMapId?data.registros:saved.registros;
+    for(const row of Object.values(rows||{})){const mapName=(!row.mapName||row.mapName===mapId)?mapNameForId(mapId):row.mapName;out.push({...row,mapId:row.mapId||mapId,mapName});}
+  }
+  return out;
 }
 const viewport = $('map-viewport'), container = $('svg-container'), status = $('info-status');
 
@@ -588,44 +602,144 @@ const historyTag = 'agroValleNavigationV32';
 const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
-const MAP_REGISTRY_HASH='936bfceb9a9c192d8e61dd395ec6b06e53a6d30acc4d4e4fd3653064186bd9a0';
-const BASE_MAP_CONFIG={id:'proyecto-2026',name:'Proyecto 2026',manifest:'map-svg/manifest-v34-5.json',manifestHash:'f148238c3cc07529de1c923bf5a82af5e10a85ffd9c69a03032df93b231de1fb',
+const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
+// Esperar a la activación de V34.9 antes de leer metadatos que V34.8 pudo dejar en caché.
+const serviceWorkerReadyPromise=(async()=>{
+  if(!('serviceWorker' in navigator))return null;
+  try{
+    const registration=await navigator.serviceWorker.register('./sw.js');
+    const candidate=registration.installing||registration.waiting;
+    if(candidate&&!['activated','redundant'].includes(candidate.state)){
+      await Promise.race([
+        new Promise(resolve=>candidate.addEventListener('statechange',()=>{if(['activated','redundant'].includes(candidate.state))resolve();})),
+        new Promise(resolve=>setTimeout(resolve,12000))
+      ]);
+    }
+    await Promise.race([navigator.serviceWorker.ready,new Promise(resolve=>setTimeout(resolve,4000))]);
+    return registration;
+  }catch(e){return null;}
+})();
+const BASE_MAP_CONFIG={id:'proyecto-2026',name:'Proyecto 2026',manifest:'map-svg/manifest-v34-5.json',manifestHash:'a070e96f1a08c9600003dcc95263895fb8793568882bd8d4e237a73fb574bb03',
   catalog:'map-svg/cuarteles-fuente-v34-5.json',labels:'map-svg/labels.json',extras:'map-svg/extras.json',
   overview:'map-svg/vista-general-satelital.jpg',overviewVectors:'map-svg/resumen-vectores-original.svg',
   vectorDir:'map-svg/vectores/',photoDir:'map-svg/foto/',
   sourceSvgHash:'206807d5d85a4d2e358dea3cb7635cbf37b5ffba9a35636f8d390fe00d052c75',
   catalogHash:'1caa8f50df18d29262145fa7e39bfe66f69f9d2abd4330d591a4bb469918b943',
   labelsHash:'8f256f9994b830ce4f1b2949fb4de93fa4ff79ecb54f5bb8c61a5ddf3066ba4b',
-  catalogVersion:'v34-5-ubicaciones-svg-2026',manifestVersion:'v34-5-ubicaciones-svg-2026',
+  catalogVersion:'v34-5-ubicaciones-svg-2026',manifestVersion:'v34-9-proyecto-2026',
   cuartelCount:738,validCount:738,blockedCount:0,labelsCount:1325,overviewMode:'separate'};
 let mapRegistry=[BASE_MAP_CONFIG],mapConfig=BASE_MAP_CONFIG,mapRegistryLoading=null,mapRegistryReady=false,mapRegistryError='';
 const AREA_RULE_VERSION='v34-7-superficies-compuestas';
-/* Reglas de agrupación solicitadas para cinco cuarteles con más de una
-   etiqueta de superficie en el SVG original. No se altera el SVG.
-   Cada componente se valida por índice, texto y coordenadas de labels.json. */
+/* Reglas compuestas verificadas contra etiquetas originales del SVG.
+   Las reglas se separan por mapa para impedir cruces de códigos homónimos. */
 const SPECIAL_AREA_GROUPS=Object.freeze({
-  'auto_P-591':{nombre:'P-591',total:0.30,parts:[
-    {ha:0.19,labelIndex:135,text:'0.19 ha.',x:4428.08,y:1484.8},
-    {ha:0.11,labelIndex:136,text:'0.11 ha.',x:4437.8,y:1527.52}
-  ]},
-  'auto_P-582':{nombre:'P-582',total:0.35,parts:[
-    {ha:0.28,labelIndex:130,text:'0.28 ha.',x:4289.12,y:1404.28},
-    {ha:0.07,labelIndex:349,text:'0.07 ha.',x:4332.68,y:1381.36}
-  ]},
-  'auto_P-581':{nombre:'P-581',total:0.80,parts:[
-    {ha:0.64,labelIndex:129,text:'0.64 ha.',x:4241.24,y:1352.8},
-    {ha:0.16,labelIndex:126,text:'0.16 ha.',x:4306.16,y:1291.0}
-  ]},
-  'auto_P-579':{nombre:'P-579',total:0.21,parts:[
-    {ha:0.11,labelIndex:131,text:'0.11 ha.',x:4255.88,y:1197.28},
-    {ha:0.10,labelIndex:127,text:'0.10 ha.',x:4288.52,y:1193.56}
-  ]},
-  'auto_P-626':{nombre:'P-626',total:0.58,parts:[
-    {ha:0.31,labelIndex:571,text:'0.31 ha.',x:3996.08,y:937.96},
-    {ha:0.27,labelIndex:1324,text:'0.27 ha.',x:4055.84,y:887.32}
-  ]}
+  'proyecto-2026':{
+    'auto_P-591':{nombre:'P-591',total:0.30,parts:[
+      {ha:0.19,labelIndex:135,text:'0.19 ha.',x:4428.08,y:1484.8},
+      {ha:0.11,labelIndex:136,text:'0.11 ha.',x:4437.8,y:1527.52}]},
+    'auto_P-582':{nombre:'P-582',total:0.35,parts:[
+      {ha:0.28,labelIndex:130,text:'0.28 ha.',x:4289.12,y:1404.28},
+      {ha:0.07,labelIndex:349,text:'0.07 ha.',x:4332.68,y:1381.36}]},
+    'auto_P-581':{nombre:'P-581',total:0.80,parts:[
+      {ha:0.64,labelIndex:129,text:'0.64 ha.',x:4241.24,y:1352.8},
+      {ha:0.16,labelIndex:126,text:'0.16 ha.',x:4306.16,y:1291.0}]},
+    'auto_P-579':{nombre:'P-579',total:0.21,parts:[
+      {ha:0.11,labelIndex:131,text:'0.11 ha.',x:4255.88,y:1197.28},
+      {ha:0.10,labelIndex:127,text:'0.10 ha.',x:4288.52,y:1193.56}]},
+    'auto_P-626':{nombre:'P-626',total:0.58,parts:[
+      {ha:0.31,labelIndex:571,text:'0.31 ha.',x:3996.08,y:937.96},
+      {ha:0.27,labelIndex:1324,text:'0.27 ha.',x:4055.84,y:887.32}]}
+  },
+  'paltos-sector-8':{
+    'auto_A_496__x948224_y1196256':{nombre:'A-496',total:0.21,version:'v34-9-superficies-compuestas-paltos-sector-8',parts:[
+      {ha:0.11,labelIndex:633,text:'0.11 ha.',x:948.2686,y:1199.3227},
+      {ha:0.10,labelIndex:634,text:'0.10 ha.',x:951.6286,y:1185.5227}]},
+    'auto_A_457__x833147_y1277774':{nombre:'A-457',total:0.39,version:'v34-9-superficies-compuestas-paltos-sector-8',parts:[
+      {ha:0.28,labelIndex:235,text:'0.28 ha.',x:832.7086,y:1281.5227},
+      {ha:0.11,labelIndex:641,text:'0.11 ha.',x:823.5886,y:1290.6427}]},
+    'auto_A_254__x599767_y1528683':{nombre:'A-254',total:0.18,version:'v34-9-superficies-compuestas-paltos-sector-8',parts:[
+      {ha:0.13,labelIndex:69,text:'0.13 ha.',x:602.7886,y:1531.4827},
+      {ha:0.05,labelIndex:632,text:'0.05 ha.',x:587.9086,y:1525.2427}]}
+  }
 });
-
+function areaRuleVersion(rule){return rule?.version||AREA_RULE_VERSION;}
+function areaRuleForSource(src,mapId=activeMapId){return src?(SPECIAL_AREA_GROUPS[mapId]?.[src.id]||null):null;}
+function expectedHectares(src,mapId=activeMapId){
+  const rule=areaRuleForSource(src,mapId);if(!rule)return Number(src?.hectareas);
+  const sum=rule.parts.reduce((n,p)=>n+Number(p.ha),0);
+  return Math.round((sum+Number.EPSILON)*100)/100;
+}
+function areaComponentsSnapshot(src,mapId=activeMapId){
+  const rule=areaRuleForSource(src,mapId);
+  return rule?rule.parts.map(p=>({ha:p.ha,labelIndex:p.labelIndex,text:p.text})):null;
+}
+function areaBreakdownForSource(src,mapId=activeMapId){
+  const rule=areaRuleForSource(src,mapId);
+  if(!rule)return fmt(src?.hectareas)+' ha';
+  // En el detalle se muestran los componentes; el total se suma en la línea TOTAL APLICADO.
+  return rule.parts.map(p=>fmt(p.ha)+' ha').join(' + ');
+}
+function areaBreakdownForRow(row){const src=sourceForRow(row);return src?areaBreakdownForSource(src):fmt(row?.ha)+' ha';}
+function splitComponentsMatch(row,src,mapId=activeMapId){
+  const rule=areaRuleForSource(src,mapId);if(!rule)return true;
+  if(row?.areaRuleVersion!==areaRuleVersion(rule)||!Array.isArray(row?.areaComponents)||row.areaComponents.length!==rule.parts.length)return false;
+  return rule.parts.every((p,i)=>{
+    const saved=row.areaComponents[i];
+    return saved&&Math.round(Number(saved.ha)*100)===Math.round(p.ha*100)&&
+      Number(saved.labelIndex)===p.labelIndex&&String(saved.text||'')===p.text;
+  });
+}
+function verifyCompositeAreaRules(byId,labels,mapId){
+  for(const [id,rule] of Object.entries(SPECIAL_AREA_GROUPS[mapId]||{})){
+    const src=byId.get(id);
+    if(!src||src.nombre!==rule.nombre||Math.round(Number(src.hectareas)*100)!==Math.round(rule.parts[0].ha*100))
+      throw Error('La superficie base de '+rule.nombre+' no coincide con el catálogo oficial.');
+    const total=Math.round(rule.parts.reduce((n,p)=>n+p.ha,0)*100)/100;
+    if(Math.round(total*100)!==Math.round(rule.total*100))throw Error('Suma de componentes inválida para '+rule.nombre+'.');
+    for(const part of rule.parts){
+      const label=labels[part.labelIndex];
+      if(!label||String(label.text||'').trim()!==part.text||Math.abs(Number(label.x)-part.x)>0.001||Math.abs(Number(label.y)-part.y)>0.001)
+        throw Error('No se pudo verificar la etiqueta '+part.text+' de '+rule.nombre+'.');
+    }
+  }
+}
+function verifyCatalogDeclarations(catalog,mapId){
+  const manualItems=(catalog.cuarteles||[]).filter(x=>x.revisionManual===true);
+  const manualDeclared=catalog.revisionesManualesV34_9||[];
+  if(manualItems.length!==manualDeclared.length)throw Error('La lista de revisiones manuales no coincide con el catálogo de '+mapId+'.');
+  for(const item of manualItems){
+    const declared=manualDeclared.find(x=>x.id===item.id);
+    if(!declared||declared.nombre!==item.nombre||Math.round(Number(declared.hectareas)*100)!==Math.round(Number(item.hectareas)*100))
+      throw Error('La aprobación manual de '+item.nombre+' no coincide con su fila del catálogo.');
+  }
+  const rules=Object.entries(SPECIAL_AREA_GROUPS[mapId]||{});
+  if(rules.length&&mapId!=='proyecto-2026'){
+    const declared=catalog.reglasSuperficieCompuestaV34_9||[];
+    if(declared.length!==rules.length)throw Error('Faltan reglas de superficies compuestas en '+mapId+'.');
+    for(const [id,rule] of rules){
+      const row=declared.find(x=>x.cuartelId===id);
+      if(!row||row.nombre!==rule.nombre||Math.round(Number(row.total)*100)!==Math.round(rule.total*100)||row.componentes?.length!==rule.parts.length)
+        throw Error('Regla compuesta no coincide para '+rule.nombre+'.');
+      for(let i=0;i<rule.parts.length;i++){
+        const a=row.componentes[i],b=rule.parts[i];
+        if(!a||Math.round(Number(a.hectareas)*100)!==Math.round(b.ha*100)||Number(a.labelIndex)!==b.labelIndex||
+          String(a.text)!==b.text||Math.abs(Number(a.x)-b.x)>0.001||Math.abs(Number(a.y)-b.y)>0.001)
+          throw Error('Componente de superficie no coincide para '+rule.nombre+'.');
+      }
+    }
+  }
+}
+async function verifySpecialAreaLabels(byId){
+  const response=await fetch(mapConfig.labels);
+  if(!response.ok)throw Error('Etiquetas originales del plano no disponibles (HTTP '+response.status+').');
+  const buffer=await response.arrayBuffer();
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(hash!==mapConfig.labelsHash)throw Error('Las etiquetas del SVG no coinciden con la fuente verificada. Registro bloqueado.');
+  const labels=JSON.parse(new TextDecoder().decode(buffer));
+  if(!Array.isArray(labels)||labels.length!==mapConfig.labelsCount)throw Error('Catálogo de etiquetas incompleto.');
+  verifyCompositeAreaRules(byId,labels,activeMapId);
+  return labels;
+}
 let sourceCatalogReady=false, sourceCatalogLoading=null, sourceCatalogGeneration=0, sourceCatalogById=new Map(), sourceCatalogByName=new Map(), sourceCatalogError='',sourceLabels=[];
 const normalizeCuartel = s => String(s||'').trim().replace(/\s+/g,'').toUpperCase();
 // Solo los códigos de nombre único permiten resolver registros legados por nombre.
@@ -645,66 +759,17 @@ function sourceForRow(row) {
   if(row?.cuartelId){return validSourceById(row.cuartelId,row.name);}
   return originalFor(row?.name); // Sólo para registros históricos no ambiguos.
 }
-function displayCuartel(row) {
+function displaySourceName(src,mapId=activeMapId){
+  if(!src)return 'Cuartel';
+  const same=sourceCatalogByName.get(normalizeCuartel(src.nombre))||[];
+  return same.length>1?src.nombre+' · '+fmt(expectedHectares(src,mapId))+' ha':src.nombre;
+}
+function displayCuartel(row){
   const src=sourceForRow(row);
-  return src?.identificacion||(row?.name||'Cuartel');
+  return src?displaySourceName(src):(row?.name||'Cuartel');
 }
 
-function areaRuleForSource(src) {
-  return src ? SPECIAL_AREA_GROUPS[src.id] || null : null;
-}
-function expectedHectares(src) {
-  const rule=areaRuleForSource(src);
-  if(!rule)return Number(src?.hectareas);
-  const sum=rule.parts.reduce((n,p)=>n+Number(p.ha),0);
-  return Math.round((sum+Number.EPSILON)*100)/100;
-}
-function areaComponentsSnapshot(src) {
-  const rule=areaRuleForSource(src);
-  return rule ? rule.parts.map(p=>({ha:p.ha,labelIndex:p.labelIndex,text:p.text})) : null;
-}
-function areaBreakdownForSource(src) {
-  const rule=areaRuleForSource(src);
-  if(!rule)return fmt(src?.hectareas)+' ha';
-  return rule.parts.map(p=>fmt(p.ha)+' ha').join(' + ')+' = '+fmt(expectedHectares(src))+' ha';
-}
-function areaBreakdownForRow(row) {
-  const src=sourceForRow(row);
-  return src ? areaBreakdownForSource(src) : fmt(row?.ha)+' ha';
-}
-function splitComponentsMatch(row, src) {
-  const rule=areaRuleForSource(src);
-  if(!rule)return true;
-  if(row?.areaRuleVersion!==AREA_RULE_VERSION||!Array.isArray(row?.areaComponents)||row.areaComponents.length!==rule.parts.length)return false;
-  return rule.parts.every((p,i)=>{
-    const saved=row.areaComponents[i];
-    return saved && Math.round(Number(saved.ha)*100)===Math.round(p.ha*100) &&
-      Number(saved.labelIndex)===p.labelIndex && String(saved.text||'')===p.text;
-  });
-}
-async function verifySpecialAreaLabels(byId) {
-  const response=await fetch(mapConfig.labels);
-  if(!response.ok)throw Error('Etiquetas originales del plano no disponibles (HTTP '+response.status+').');
-  const buffer=await response.arrayBuffer();
-  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
-  if(hash!==mapConfig.labelsHash)throw Error('Las etiquetas del SVG no coinciden con la fuente verificada. Registro bloqueado.');
-  const labels=JSON.parse(new TextDecoder().decode(buffer));
-  if(!Array.isArray(labels)||labels.length!==mapConfig.labelsCount)throw Error('Catálogo de etiquetas incompleto.');
-  for(const [id,rule] of Object.entries(SPECIAL_AREA_GROUPS)){
-    const src=byId.get(id);
-    if(!src||src.nombre!==rule.nombre||Math.round(Number(src.hectareas)*100)!==Math.round(rule.parts[0].ha*100))
-      throw Error('La superficie base de '+rule.nombre+' no coincide con el catálogo oficial.');
-    const total=Math.round(rule.parts.reduce((n,p)=>n+p.ha,0)*100)/100;
-    if(Math.round(total*100)!==Math.round(rule.total*100))throw Error('Suma de componentes inválida para '+rule.nombre+'.');
-    for(const part of rule.parts){
-      const label=labels[part.labelIndex];
-      if(!label||String(label.text||'').trim()!==part.text||
-        Math.abs(Number(label.x)-part.x)>0.001||Math.abs(Number(label.y)-part.y)>0.001)
-        throw Error('No se pudo verificar la etiqueta '+part.text+' de '+rule.nombre+'.');
-    }
-  }
-  return labels;
-}
+
 async function verifyNewMapLabels(catalog){
   const response=await fetch(mapConfig.labels);
   if(!response.ok)throw Error('Etiquetas del mapa no disponibles (HTTP '+response.status+').');
@@ -724,8 +789,11 @@ async function verifyNewMapLabels(catalog){
     if(!Number.isFinite(area)||Math.round(area*100)!==Math.round(Number(item.hectareas)*100))
       throw Error('La superficie original de '+item.nombre+' no coincide con su catálogo.');
     const valid=item.estado==='ASOCIACION_UNICA'||item.estado==='ASOCIACION_POR_UBICACION';
-    if(valid&&(!item.asociacionMutua||Number(item.distanciaEtiquetas)>15||Number(item.ratioSegundaOpcion)<1.25))
+    const manual=item.revisionManual===true&&item.revisionManualVersion==='v34-9-confirmacion-visual-supervisor';
+    if(valid&&!manual&&(!item.asociacionMutua||Number(item.distanciaEtiquetas)>15||Number(item.ratioSegundaOpcion)<1.25))
       throw Error('Asociación espacial no supera los criterios de seguridad para '+item.nombre+'.');
+    if(manual&&item.estado!=='ASOCIACION_POR_UBICACION')
+      throw Error('La revisión manual de '+item.nombre+' no conserva el ID espacial requerido.');
   }
   return labels;
 }
@@ -773,7 +841,7 @@ function updateAuditNotice() {
   const notice=$('audit-notice');if(!notice)return;
   if(!sourceCatalogReady){notice.hidden=!sourceCatalogError;notice.textContent=sourceCatalogError?'⚠ No se pudo comprobar el catálogo del SVG: '+sourceCatalogError+' El registro está bloqueado.':'';return;}
   const active=auditRows(Object.values(data.registros));
-  const archives=Object.values(loadJornadas()).flatMap(j=>Array.isArray(j?.detalle)?j.detalle:[]);
+  const archives=Object.values(loadJornadas()).filter(j=>(j?.mapId||'proyecto-2026')===activeMapId).flatMap(j=>Array.isArray(j?.detalle)?j.detalle:[]);
   const old=auditRows(archives);
   const all=[...active,...old];
   if(all.length){notice.hidden=false;notice.textContent='⚠ AUDITORÍA OBLIGATORIA: '+all.length+' registro(s) activo(s) o archivado(s) sin concordancia con el SVG. No se modificarán automáticamente. Revisa el respaldo y corrige antes de compartir informes. '+all.slice(0,3).map(p=>p.name+': '+p.reason).join(' | ');}
@@ -798,6 +866,7 @@ function updateMapSelectorUI(){
   const chip=$('active-map-chip');if(chip)chip.textContent=mapConfig?.name||'Proyecto 2026';
 }
 async function loadMapRegistry(){
+  try{await serviceWorkerReadyPromise;}catch(e){}
   if(mapRegistryReady)return true;
   if(mapRegistryLoading)return mapRegistryLoading;
   mapRegistryLoading=(async()=>{
@@ -807,7 +876,7 @@ async function loadMapRegistry(){
     const registryHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',registryBuffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
     if(registryHash!==MAP_REGISTRY_HASH)throw Error('El catálogo multi-mapa no coincide con su huella verificada.');
     const registry=JSON.parse(new TextDecoder().decode(registryBuffer));
-    if(registry?.version!=='v34.8-multi-map'||!Array.isArray(registry.maps)||!registry.maps.length)
+    if(registry?.version!=='v34.9-multi-map'||!Array.isArray(registry.maps)||!registry.maps.length)
       throw Error('Formato del catálogo multi-mapa incorrecto.');
     const ids=new Set();
     for(const config of registry.maps){
@@ -835,10 +904,10 @@ async function loadMapRegistry(){
     mapRegistryError=err?.message||String(err);
     mapRegistry=[BASE_MAP_CONFIG];mapConfig=BASE_MAP_CONFIG;
     if(activeMapId!=='proyecto-2026'){
-      activeMapId='proyecto-2026';try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}
+      activeMapId='proyecto-2026';
       setStorageKeys(activeMapId);data=readStoredMapData();
     }
-    mapRegistryReady=true;updateMapSelectorUI();return false;
+    mapRegistryReady=false;updateMapSelectorUI();return false;
   }).finally(()=>{mapRegistryLoading=null;});
   return mapRegistryLoading;
 }
@@ -858,6 +927,7 @@ async function loadSourceCatalog() {
     if(catalog.origenSHA256!==mapConfig.sourceSvgHash||catalog.version!==mapConfig.catalogVersion||
       catalog.cantidadEtiquetas!==mapConfig.cuartelCount||catalog.cuarteles?.length!==mapConfig.cuartelCount)
       throw Error('Catálogo cartográfico incompleto o de otra versión para '+mapConfig.name+'.');
+    verifyCatalogDeclarations(catalog,activeMapId);
     const byId=new Map(),byName=new Map();
     for(const item of catalog.cuarteles){
       if(!item.id||byId.has(item.id)||!Number.isFinite(item.hectareas)||item.hectareas<=0||
@@ -877,6 +947,7 @@ async function loadSourceCatalog() {
       labels=await verifySpecialAreaLabels(byId);
     }else{
       labels=await verifyNewMapLabels(catalog);
+      verifyCompositeAreaRules(byId,labels,activeMapId);
     }
     if(generation!==sourceCatalogGeneration||mapId!==activeMapId)return false;
     sourceCatalogById=byId;sourceCatalogByName=byName;sourceLabels=labels;
@@ -898,9 +969,39 @@ function save() {
   catch (e) { status.textContent = 'NO GUARDADO: revisa el almacenamiento.';return false; }
 }
 
-/* ---------- jornadas ---------- */
-function loadJornadas() { try { return JSON.parse(localStorage.getItem(JORNADAS_STORE) || '{}'); } catch (e) { return {}; } }
-function saveJornadas(o) { try { localStorage.setItem(JORNADAS_STORE, JSON.stringify(o)); return true; } catch (e) { return false; } }
+/* ---------- historial global multi-mapa ---------- */
+const HISTORY_MIGRATION_KEY='agrovalle_historial_global_migrado_v34_9';
+function parseStoreObject(key){try{const value=JSON.parse(localStorage.getItem(key)||'{}');return value&&typeof value==='object'?value:{};}catch(e){return {};}}
+function loadJornadas(){
+  let global=parseStoreObject(JORNADAS_STORE_BASE);
+  try{
+    if(localStorage.getItem(HISTORY_MIGRATION_KEY)!=='1'){
+      // Importar una sola vez los historiales que V34.8 guardaba en claves por mapa.
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(!key?.startsWith(JORNADAS_STORE_BASE+'__'))continue;
+        const mapId=key.slice((JORNADAS_STORE_BASE+'__').length),legacy=parseStoreObject(key);
+        for(const [oldId,entry] of Object.entries(legacy)){
+          const newId=mapId+'::'+oldId;
+          if(global[newId])continue;
+          const mapName=entry?.mapName||mapNameForId(mapId);
+          global[newId]={...entry,id:entry?.id||newId,mapId:entry?.mapId||mapId,mapName,
+            detalle:Array.isArray(entry?.detalle)?entry.detalle.map(r=>({...r,mapId:r.mapId||mapId,mapName:r.mapName||mapName})):[]};
+        }
+      }
+      // Las jornadas que estaban en la clave base pertenecen a Proyecto 2026 si no guardaban mapId.
+      for(const [id,entry] of Object.entries(global)){
+        const mapId=entry?.mapId||'proyecto-2026',mapName=entry?.mapName||mapNameForId(mapId);
+        global[id]={...entry,mapId,mapName,detalle:Array.isArray(entry?.detalle)?entry.detalle.map(r=>({...r,mapId:r.mapId||mapId,mapName:r.mapName||mapName})):[]};
+      }
+      localStorage.setItem(JORNADAS_STORE_BASE,JSON.stringify(global));
+      localStorage.setItem(HISTORY_MIGRATION_KEY,'1');
+    }
+  }catch(e){ /* Si no se puede migrar, no se eliminan las claves antiguas. */ }
+  return global;
+}
+function saveJornadas(o){try{localStorage.setItem(JORNADAS_STORE_BASE,JSON.stringify(o));return true;}catch(e){return false;}}
+function loadJornadasForMap(mapId){return Object.fromEntries(Object.entries(loadJornadas()).filter(([,j])=>(j?.mapId||'proyecto-2026')===mapId));}
 let historicalPanel = null; // Vista de solo lectura: no mezcla jornadas archivadas con el mapa activo.
 function clearHistoricalPanel(restoreWorkingDate=true) {
   // Al consultar una jornada archivada se muestra su fecha sólo en modo lectura.
@@ -955,9 +1056,9 @@ function openModal(id) {
   const src=sourceCatalogReady?validSourceById(id,c.name):null;
   const verified=!!src;
   const problem=r?auditRows([r]):[];
-  const label=src?.estado==='ASOCIACION_POR_UBICACION'?src.identificacion:(c.name||'');
+  const label=src?displaySourceName(src):(c.name||'');
   $('modal-name').value=label;
-  $('modal-ha').value=verified?areaBreakdownForSource(src):'SIN VALIDAR — BLOQUEADO';
+  $('modal-ha').value=verified?(areaRuleForSource(src)?areaBreakdownForSource(src)+' = '+fmt(expectedHectares(src))+' ha':areaBreakdownForSource(src)):'SIN VALIDAR — BLOQUEADO';
   const warning=$('modal-source-warning');warning.hidden=verified&&!problem.length;
   warning.textContent=problem.length?'ATENCIÓN: '+problem[0].reason+' Se requiere respaldo y revisión explícita.':
     !sourceCatalogReady?'Catálogo todavía no verificado. No se puede registrar.':
@@ -970,7 +1071,7 @@ function openModal(id) {
   $('modal-confirm').checked=false;
   $('modal-confirm').disabled=!!r||!verified;
   $('modal-confirm-text').textContent=verified?
-    'Confirmo '+label+' y '+areaBreakdownForSource(src)+' según las etiquetas originales del plano.':
+    'Confirmo '+label+' y '+(areaRuleForSource(src)?areaBreakdownForSource(src)+' = '+fmt(expectedHectares(src))+' ha':areaBreakdownForSource(src))+' según las etiquetas originales del plano.':
     'Registro bloqueado hasta verificar el plano.';
   $('modal-yes').hidden=!!r;
   $('modal-yes').disabled=true;
@@ -1009,7 +1110,7 @@ $('modal-yes').onclick=()=>{
   modalWorking=true;$('modal-yes').disabled=true;
   const previous=data.registros[id];
   data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
-    ...(areaRule?{areaRuleVersion:AREA_RULE_VERSION,areaComponents:areaComponentsSnapshot(src)}:{}),
+    ...(areaRule?{areaRuleVersion:areaRuleVersion(areaRule),areaComponents:areaComponentsSnapshot(src)}:{}),
     mapId:activeMapId,mapName:mapConfig.name,catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,registradoEn:new Date().toISOString()};
   if(!save()){
     if(previous)data.registros[id]=previous;else delete data.registros[id];
@@ -1031,10 +1132,10 @@ $('modal-correct').onclick=()=>{
   const snapshot=areaComponentsSnapshot(src);
   const event={tipo:'RECTIFICACION_MANUAL',anteriorHa:current,nuevaHa:expected,
     desgloseAnterior:Array.isArray(r.areaComponents)?r.areaComponents:null,
-    desgloseNuevo:snapshot,reglaSuperficie:areaRule?AREA_RULE_VERSION:null,
+    desgloseNuevo:snapshot,reglaSuperficie:areaRule?areaRuleVersion(areaRule):null,
     fechaOriginal:dateOriginal,corregidoEn:new Date().toISOString(),fuenteSHA256:mapConfig.sourceSvgHash,mapId:activeMapId};
   const updated={...r,ha:expected,correcciones:[...(Array.isArray(r.correcciones)?r.correcciones:[]),event]};
-  if(areaRule){updated.areaRuleVersion=AREA_RULE_VERSION;updated.areaComponents=snapshot;}
+  if(areaRule){updated.areaRuleVersion=areaRuleVersion(areaRule);updated.areaComponents=snapshot;}
   else{delete updated.areaRuleVersion;delete updated.areaComponents;}
   data.registros[id]=updated;
   if(!save()){data.registros[id]=previous;toast('No se pudo guardar la rectificación','err');return;}
@@ -1295,7 +1396,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-8-multi-map';
+  const SHELL_VERSION='agrovalle-shell-v34-9-multi-map';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1332,7 +1433,9 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       const manifestHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',manifestBuffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
       if(manifestHash!==mapConfig.manifestHash)throw Error('El manifest de '+mapConfig.name+' no coincide con su huella SHA-256.');
       mapManifest=JSON.parse(new TextDecoder().decode(manifestBuffer));mapExtras=await c.json();
-      if(mapManifest.version!==mapConfig.manifestVersion||mapManifest.sourceSvgSHA256!==mapConfig.sourceSvgHash||
+      const manifestSourceHash=mapManifest.sourceSvgSHA256||mapManifest.origenSHA256||
+        (activeMapId==='proyecto-2026'&&mapManifest.version==='v34-9-proyecto-2026'?mapConfig.sourceSvgHash:null);
+      if(mapManifest.version!==mapConfig.manifestVersion||manifestSourceHash!==mapConfig.sourceSvgHash||
         !mapManifest.files.includes(mapConfig.catalog)||!mapManifest.files.includes(mapConfig.labels)||
         !mapManifest.files.includes(mapConfig.overview)||(mapConfig.overviewVectors&&!mapManifest.files.includes(mapConfig.overviewVectors)))
         throw Error('Manifest cartográfico incorrecto o desactualizado para '+mapConfig.name+'.');
@@ -1581,7 +1684,6 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   const installFeedback = $('map-install-feedback');
   const installLabel = $('install-map-label');
-  let installingMap = false;
   function mapInstallMessage(msg) {
     installFeedback.hidden = !msg;
     installFeedback.textContent = msg || '';
@@ -1594,129 +1696,198 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     if (/HTML|inválido|invalido/i.test(err)) return `Servidor mal configurado: ${file} no devolvió el tipo de archivo correcto. Revisa Cloudflare y las rutas.`;
     return `Falló ${file}: ${err}. Comprueba la red y reintenta; los archivos ya instalados se conservan.`;
   }
-  async function updateMapInstallStatus() {
-    if (!mapManifest || !('caches' in window)) return;
-    const cache = await caches.open(mapCacheName()), urls=mapUrls();
-    let ready = 0;
-    for (const u of urls) if (await cache.match(u)) ready++;
-    if (installingMap) return;
-    let hasShell=false;
-    try{
-      const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;
-      const shell=await caches.open(SHELL_VERSION);
-      const essential=await Promise.all(['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css'].map(u=>shell.match(u)));
-      hasShell=!!reg?.active && essential.every(Boolean);
-    }catch(e){}
-    const readyOffline=ready===urls.length && sourceCatalogReady && hasShell;
-    installLabel.textContent=readyOffline?'Mapa instalado ✓':ready===urls.length?'Verificar instalación':ready?`Reanudar (${ready}/${urls.length})`:'Instalar mapa';
-    if(readyOffline)mapInstallMessage('');
+  const mapCacheNameForId=id=>id==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+id;
+  const mapUrlsForConfig=(cfg,manifest)=>[cfg.manifest,...manifest.files];
+  async function hasOfflineShell(){
+    try{const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;const shell=await caches.open(SHELL_VERSION);
+      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png'];
+      return !!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
+    }catch(e){return false;}
   }
-  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  async function downloadAndVerify(u, cache) {
-    let lastError;
-    for (let attempt=1; attempt<=3; attempt++) {
-      try {
-        const resp = await fetch(u, { cache:'reload' });
-        if (!resp.ok) throw Error(`HTTP ${resp.status}`);
-        const buffer=await resp.arrayBuffer(), bytes=new Uint8Array(buffer);
-        if(u.endsWith('.jpg')) {
-          if(bytes.length<4 || bytes[0]!==0xff || bytes[1]!==0xd8 || bytes[2]!==0xff)
-            throw Error('El servidor devolvió HTML o un JPEG inválido');
-        } else if(u.endsWith('.svg')) {
-          if(bytes.length<80 || !new TextDecoder().decode(bytes.subarray(0,1500)).includes('<svg'))
-            throw Error('El servidor devolvió HTML o un SVG inválido');
-        } else {
-          try{JSON.parse(new TextDecoder().decode(bytes));}
-          catch(e){throw Error('JSON inválido o HTML devuelto en lugar del archivo');}
-        }
-        let expectedHash=null;
-        if(u===mapConfig.manifest)expectedHash=mapConfig.manifestHash;
-        else if(u===mapConfig.catalog)expectedHash=mapConfig.catalogHash;
-        else if(u===mapConfig.labels)expectedHash=mapConfig.labelsHash;
-        else expectedHash=mapManifest?.integrity?.[u]||null;
-        if(expectedHash){
-          const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
-          if(actual!==expectedHash)throw Error('Archivo cartográfico alterado o desactualizado: '+u+' · descarga bloqueada');
-        }
-        // Guardar únicamente archivos completos y verificados.
-        await cache.put(u, new Response(buffer,{status:200,headers:resp.headers}));
-        return;
-      } catch(e) {
-        lastError=e;
-        // HTTP 404 / HTML inesperado son errores de despliegue, no de Wi-Fi.
-        if (/HTTP 404|HTML|inválido|invalido/.test(e.message||'')) break;
-        if (attempt<3) await delay(600*attempt);
+  const digestHex=async buffer=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  async function readMapManifest(cfg){
+    const response=await fetch(cfg.manifest);if(!response.ok)throw Error(cfg.manifest+' HTTP '+response.status);
+    const buffer=await response.arrayBuffer();if(await digestHex(buffer)!==cfg.manifestHash)throw Error('Huella SHA-256 incorrecta en '+cfg.manifest);
+    const manifest=JSON.parse(new TextDecoder().decode(buffer));
+    const sourceHash=manifest.sourceSvgSHA256||manifest.origenSHA256||
+      (cfg.id==='proyecto-2026'&&manifest.version==='v34-9-proyecto-2026'?cfg.sourceSvgHash:null);
+    if(manifest.version!==cfg.manifestVersion||sourceHash!==cfg.sourceSvgHash||
+      !manifest.files.includes(cfg.catalog)||!manifest.files.includes(cfg.labels)||!manifest.files.includes(cfg.overview)||
+      (cfg.overviewVectors&&!manifest.files.includes(cfg.overviewVectors)))
+      throw Error('Manifest cartográfico incorrecto para '+cfg.name+'.');
+    if(cfg.id!=='proyecto-2026'&&manifest.files.some(file=>!(/^[a-f0-9]{64}$/i.test(manifest.integrity?.[file]||''))))
+      throw Error('Faltan huellas SHA-256 en el manifest de '+cfg.name+'.');
+    return {manifest,buffer};
+  }
+  async function verifyMapCatalogPackage(cfg,manifest){
+    const [cr,lr]=await Promise.all([fetch(cfg.catalog),fetch(cfg.labels)]);
+    if(!cr.ok||!lr.ok)throw Error('Catálogo o etiquetas no disponibles para '+cfg.name+'.');
+    const [cb,lb]=await Promise.all([cr.arrayBuffer(),lr.arrayBuffer()]);
+    if(await digestHex(cb)!==cfg.catalogHash||await digestHex(lb)!==cfg.labelsHash)
+      throw Error('Catálogo o etiquetas con SHA-256 incorrecto para '+cfg.name+'.');
+    const catalog=JSON.parse(new TextDecoder().decode(cb)),labels=JSON.parse(new TextDecoder().decode(lb));
+    verifyCatalogDeclarations(catalog,cfg.id);
+    if(catalog.version!==cfg.catalogVersion||catalog.origenSHA256!==cfg.sourceSvgHash||
+      catalog.cantidadEtiquetas!==cfg.cuartelCount||catalog.cuarteles?.length!==cfg.cuartelCount||labels.length!==cfg.labelsCount)
+      throw Error('Cantidad o versión del catálogo incorrecta para '+cfg.name+'.');
+    const byId=new Map();
+    for(const item of catalog.cuarteles){
+      if(!item.id||byId.has(item.id)||!Number.isFinite(Number(item.hectareas))||Number(item.hectareas)<=0)
+        throw Error('Registro cartográfico inválido en '+cfg.name+'.');
+      if(cfg.id!=='proyecto-2026'){
+        const name=labels[item.fuenteNombreIndice],area=labels[item.fuenteSuperficieIndice];
+        if(!name||!area||String(name.text||'').trim()!==item.nombre||String(area.text||'').trim()!==item.etiquetaSuperficie||
+          Math.abs(Number(name.x)-Number(item.x))>0.001||Math.abs(Number(name.y)-Number(item.y))>0.001)
+          throw Error('No coincide la etiqueta original de '+item.nombre+' en '+cfg.name+'.');
+        const match=String(area.text||'').match(/(\d+(?:[.,]\d+)?)\s*ha/i);
+        if(!match||Math.round(Number(match[1].replace(',','.'))*100)!==Math.round(Number(item.hectareas)*100))
+          throw Error('La hectárea de '+item.nombre+' no coincide con su etiqueta SVG.');
+        const valid=item.estado==='ASOCIACION_UNICA'||item.estado==='ASOCIACION_POR_UBICACION';
+        const manual=item.revisionManual===true&&item.revisionManualVersion==='v34-9-confirmacion-visual-supervisor';
+        if(valid&&!manual&&(!item.asociacionMutua||Number(item.distanciaEtiquetas)>15||Number(item.ratioSegundaOpcion)<1.25))
+          throw Error('Asociación espacial pendiente para '+item.nombre+'.');
       }
+      byId.set(item.id,item);
+    }
+    verifyCompositeAreaRules(byId,labels,cfg.id);
+  }
+  function expectedHashForMapFile(url,cfg,manifest){
+    if(url===cfg.manifest)return cfg.manifestHash;
+    if(url===cfg.catalog)return cfg.catalogHash;
+    if(url===cfg.labels)return cfg.labelsHash;
+    return manifest.integrity?.[url]||null;
+  }
+  async function cachedMapFileValid(url,cache,cfg,manifest){
+    const response=await cache.match(url);if(!response)return false;
+    const expected=expectedHashForMapFile(url,cfg,manifest);
+    if(!expected)return true;
+    const buffer=await response.arrayBuffer();return await digestHex(buffer)===expected;
+  }
+  async function downloadMapFile(url,cache,cfg,manifest){
+    let lastError;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        const response=await fetch(url,{cache:'reload'});if(!response.ok)throw Error(url+' HTTP '+response.status);
+        const buffer=await response.arrayBuffer(),bytes=new Uint8Array(buffer);
+        if(url.endsWith('.jpg')){
+          if(bytes.length<4||bytes[0]!==0xff||bytes[1]!==0xd8||bytes[2]!==0xff)throw Error('JPEG inválido: '+url);
+        }else if(url.endsWith('.svg')){
+          if(bytes.length<80||!new TextDecoder().decode(bytes.subarray(0,1500)).includes('<svg'))throw Error('SVG inválido: '+url);
+        }else if(url.endsWith('.json')){
+          try{JSON.parse(new TextDecoder().decode(bytes));}catch(e){throw Error('JSON inválido: '+url);}
+        }
+        const expected=expectedHashForMapFile(url,cfg,manifest);
+        if(expected&&await digestHex(buffer)!==expected)throw Error('SHA-256 incorrecto: '+url);
+        await cache.put(url,new Response(buffer,{status:200,headers:response.headers}));return;
+      }catch(err){lastError=err;if(/HTTP 404|inválido|invalido|SHA-256/.test(err.message||''))break;if(attempt<3)await delay(700*attempt);}
     }
     throw lastError;
   }
-  $('install-map').onclick = async () => {
-    if(installingMap)return;
-    if(!mapManifest){await initMap();if(!mapManifest)return;}
-    if(!('caches' in window)){
-      mapInstallMessage('Cache Storage no está disponible en este navegador. Abre Agro Valle con Safari o Chrome mediante HTTPS.');return;
-    }
-    installingMap=true;
-    const btn=$('install-map');btn.disabled=true;
-    const urls=mapUrls();let ok=0,failedFile='';
+  async function checkMapCacheComplete(cfg){
+    if(!('caches' in window))return false;
     try{
-      if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
-      const cache=await caches.open(mapCacheName());
-      const failures=[];let cursor=0;
-      mapInstallMessage('Descargando SVG y fotografía satelital. Conserva esta pantalla abierta hasta verificar todos los recursos.');
-      // Tres solicitudes simultáneas, nunca cientos de descargas concurrentes en iOS.
-      async function worker(){
-        while(cursor<urls.length){
-          const u=urls[cursor++];
-          try{
-            const prev=await cache.match(u);
-            if(!prev)await downloadAndVerify(u,cache);
-            ok++;
-          }catch(err){failures.push({file:u,err});}
-          installLabel.textContent=`Instalando (${ok}/${urls.length})`;
-          // Yield to main thread, allowing interaction and rendering on mobile.
-          if((ok+failures.length)%8===0)await delay(0);
+      const {manifest}=await readMapManifest(cfg),cache=await caches.open(mapCacheNameForId(cfg.id));
+      const urls=mapUrlsForConfig(cfg,manifest);
+      for(const url of urls)if(!await cache.match(url))return false;
+      const markerKey='agrovalle_map_installed_v34_9_'+cfg.id,markerValue=cfg.manifestHash+':'+cfg.catalogHash;
+      if(localStorage.getItem(markerKey)!==markerValue){
+        await verifyMapCatalogPackage(cfg,manifest);
+        try{localStorage.setItem(markerKey,markerValue);}catch(e){}
+      }
+      return true;
+    }catch(e){return false;}
+  }
+  async function updateMapInstallStatus(){
+    if(installingMap)return;
+    try{
+      await loadMapRegistry();
+      const checks=await Promise.all(mapRegistry.map(checkMapCacheComplete));
+      const ready=checks.filter(Boolean).length, shellReady=ready===mapRegistry.length?await hasOfflineShell():false;
+      installLabel.textContent=ready===mapRegistry.length&&shellReady?'Todos los mapas instalados ✓':`Instalar todos los mapas (${ready}/${mapRegistry.length})`;
+      if(ready===mapRegistry.length&&shellReady)mapInstallMessage('');
+    }catch(e){installLabel.textContent='Instalar todos los mapas';}
+  }
+  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  let installingMap=false,autoInstallPromise=null,autoInstallStarted=false;
+  async function installAllMaps(automatic=false){
+    if(autoInstallPromise)return autoInstallPromise;
+    if(installingMap)return false;
+    if(!('caches' in window)){mapInstallMessage('Cache Storage no está disponible. Abre la aplicación por HTTPS en Safari o Chrome.');return false;}
+    try{
+      await loadMapRegistry();
+      if(!mapRegistryError&&mapRegistry.length===4){
+        const installed=await Promise.all(mapRegistry.map(checkMapCacheComplete));
+        if(installed.every(Boolean)&&await hasOfflineShell()){installLabel.textContent='Todos los mapas instalados ✓';mapInstallMessage('');return true;}
+      }
+    }catch(e){}
+    if(!navigator.onLine){installLabel.textContent='Conecta para completar mapas';mapInstallMessage('Faltan mapas por instalar. La instalación automática continuará cuando vuelva la conexión.');return false;}
+    autoInstallPromise=(async()=>{ 
+      installingMap=true;const btn=$('install-map');btn.disabled=true;
+      let allReady=true,failedMap='',failedFile='';
+      try{
+        if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
+        await loadMapRegistry();
+        for(let mapIndex=0;mapIndex<mapRegistry.length;mapIndex++){
+          const cfg=mapRegistry[mapIndex];failedMap=cfg.name;
+          mapInstallMessage(`Comprobando ${cfg.name} (${mapIndex+1}/${mapRegistry.length})…`);
+          const {manifest}=await readMapManifest(cfg);
+          const cache=await caches.open(mapCacheNameForId(cfg.id)),urls=mapUrlsForConfig(cfg,manifest);
+          const markerKey='agrovalle_map_installed_v34_9_'+cfg.id;
+          const markerValue=cfg.manifestHash+':'+cfg.catalogHash;
+          const alreadyMarked=localStorage.getItem(markerKey)===markerValue;
+          let complete=true;
+          for(const url of urls)if(!await cache.match(url)){complete=false;break;}
+          if(complete&&alreadyMarked){
+            installLabel.textContent=`Mapas ${mapIndex+1}/${mapRegistry.length} · ya instalado`;
+            mapInstallMessage(`✓ ${cfg.name}: ya estaba instalado; no se vuelve a descargar ni procesar.`);
+            continue;
+          }
+          await verifyMapCatalogPackage(cfg,manifest);
+          let done=0,cursor=0;const failures=[];
+          const worker=async()=>{
+            while(cursor<urls.length){
+              const url=urls[cursor++];
+              try{
+                const valid=await cachedMapFileValid(url,cache,cfg,manifest);
+                if(!valid){await cache.delete(url);failedFile=url;await downloadMapFile(url,cache,cfg,manifest);}
+                done++;
+              }catch(err){failures.push({url,err});}
+              installLabel.textContent=`Mapas ${mapIndex+1}/${mapRegistry.length} · ${done}/${urls.length}`;
+              if(done%6===0)await delay(0);
+            }
+          };
+          // Dos descargas simultáneas como máximo: evita picos de memoria en Safari iOS.
+          await Promise.all([worker(),worker()]);
+          if(failures.length)throw Error(failures.length+' recurso(s) pendientes. Primero: '+failures[0].url+' · '+(failures[0].err?.message||failures[0].err));
+          for(const url of urls)if(!await cache.match(url))throw Error('Instalación incompleta: falta '+url);
+          try{localStorage.setItem(markerKey,markerValue);}catch(e){}
+          mapInstallMessage(`✓ ${cfg.name} listo (${mapIndex+1}/${mapRegistry.length}). Se continúa con el siguiente mapa…`);
+          await delay(40);
         }
-      }
-      await Promise.all([worker(),worker(),worker()]);
-      if(failures.length){
-        failedFile=failures[0].file;
-        const message=failures[0].err?.message||String(failures[0].err);
-        throw Error(`${failures.length} archivo(s) pendiente(s). Primero: ${failedFile}: ${message}`);
-      }
-      let verified=0;
-      for(const u of urls)if(await cache.match(u))verified++;
-      if(verified!==urls.length)throw Error(`Descarga incompleta: ${verified}/${urls.length}`);
-      const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration().catch(()=>null):null;
-      const shell=await caches.open(SHELL_VERSION);
-      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css',
-        './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2',
-        './assets/icon-192.png','./assets/icon-512.png'];
-      const checks=await Promise.all(essentials.map(u=>shell.match(u)));
-      const hasShell=!!reg?.active && checks.every(Boolean);
-      if(hasShell){
-        await loadSourceCatalog();
-        installLabel.textContent='Mapa instalado ✓';
-        // Cuando el mapa está instalado, basta el estado compacto del botón.
-        // Ocultar el aviso extenso sin afectar los errores ni el progreso de descarga.
-        mapInstallMessage('');
-        // Se conservan los cachés de otros mapas para que cada sector siga disponible offline.
-      }else{
-        installLabel.textContent='Mapa descargado ✓';
-        mapInstallMessage(`Plano SVG completo (${verified}/${urls.length}). Pendiente confirmar archivos esenciales del Service Worker. Reabre la página con internet y vuelve a comprobar la instalación antes de trabajar sin señal.`);
-        toast('Mapa descargado, verificar instalación de la aplicación','warn');
-      }
-    }catch(err){
-      const msg=mapInstallError(err,failedFile||'mapa');
-      mapInstallMessage(msg);
-      status.textContent=msg;
-      installLabel.textContent=`Reanudar (${ok}/${urls.length})`;
-      toast('Faltan recursos offline. Los archivos descargados permanecen guardados.','warn');
-    }finally{installingMap=false;btn.disabled=false;}
-  };
+        const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration().catch(()=>null):null;
+        const shell=await caches.open(SHELL_VERSION);
+        const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css',
+          './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png'];
+        const hasShell=!!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
+        if(!hasShell)throw Error('Los mapas están guardados, pero faltan recursos esenciales de la aplicación offline. Reabre con internet para verificar el Service Worker.');
+        installLabel.textContent='Todos los mapas instalados ✓';mapInstallMessage('');
+        return true;
+      }catch(err){
+        allReady=false;const msg=mapInstallError(err,failedFile||failedMap||'mapas');
+        mapInstallMessage(msg);status.textContent=msg;installLabel.textContent='Reanudar instalación de mapas';
+        if(!automatic)toast('No se completó la instalación de todos los mapas. Los recursos ya guardados se conservan.','warn');
+        return false;
+      }finally{installingMap=false;btn.disabled=false;autoInstallPromise=null;updateMapInstallStatus().catch(()=>{});}
+    })();
+    return autoInstallPromise;
+  }
+  $('install-map').onclick=()=>installAllMaps(false);
   $('btn-rail-svg').onclick=()=>{$('install-map').click();};
-  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-  window.addEventListener('online',()=>{$('sync-label').textContent='En línea · local';});
+  if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
+    try{await serviceWorkerReadyPromise;}catch(e){}
+    if(!autoInstallStarted){autoInstallStarted=true;installAllMaps(true).catch(()=>{});}
+  });
+  window.addEventListener('online',()=>{$('sync-label').textContent='En línea · local';if(!autoInstallStarted||!autoInstallPromise)installAllMaps(true).catch(()=>{});});
   window.addEventListener('offline',()=>{$('sync-label').textContent='Sin señal · local';toast('Sin señal: puedes seguir registrando','warn');});
   $('sync-label').textContent=navigator.onLine?'En línea · local':'Sin señal · local';
 
@@ -1777,7 +1948,7 @@ function renderDetectedList() {
     const b = document.createElement('button');
     b.className = 'det-item' + (done.has(d.id) ? ' done' : '');
     const src=sourceCatalogById.get(d.id),valid=validSourceById(d.id,d.text);
-    const n = document.createElement('b'); n.textContent = src?.identificacion||d.text;
+    const n = document.createElement('b'); n.textContent = src?displaySourceName(src):d.text;
     const h = document.createElement('span'); h.textContent = valid
       ?(valid.estado==='ASOCIACION_POR_UBICACION'?'✓ UBICACIÓN VALIDADA · ':'')+areaBreakdownForSource(valid)
       :'⚠ PENDIENTE DE VALIDACIÓN · REGISTRO BLOQUEADO';
@@ -1836,7 +2007,7 @@ $('btn-data-backup').onclick=()=>{
     const key=localStorage.key(i);
     if(prefixes.some(base=>key===base||key.startsWith(base+'__')))stores[key]=localStorage.getItem(key);
   }
-  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_multi_mapa_v34_8',version:'v34.8-multi-map',
+  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_multi_mapa_v34_9',version:'v34.9-multi-map',
     mapaActivo:activeMapId,mapaActivoNombre:mapConfig.name,stores};
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download='GESTION_AGRICOLA_respaldo_'+localDay()+'.json';a.click();
@@ -1949,17 +2120,17 @@ function loadActiveMapFormState(){
   rep('date').value=selectedWorkDate;updateWorkDateHint();toggleCustom();
   rep('preview').hidden=true;rep('preview').textContent='';rep('message').textContent='';
 }
-async function switchActiveMap(nextId){
+async function switchActiveMap(nextId,options={}){
   await loadMapRegistry();
   const next=mapRegistry.find(m=>m.id===nextId);
   if(!next){toast('Mapa no disponible en el catálogo','err');updateMapSelectorUI();return false;}
   if(next.id===activeMapId){updateMapSelectorUI();return true;}
   const oldName=mapConfig.name;
-  const hasWork=Object.keys(data.registros).length>0||Object.keys(loadJornadas()).length>0;
+  const hasWork=Object.keys(data.registros).length>0||Object.keys(loadJornadasForMap(activeMapId)).length>0;
   const message=hasWork
     ?'Cambiar de '+oldName+' a '+next.name+'?\n\nLos registros y jornadas de '+oldName+' quedarán guardados en su propio espacio. Se abrirán los datos independientes de '+next.name+'. No se mezclarán superficies ni cuarteles.'
     :'Seleccionar '+next.name+' para esta jornada?\n\nSus cuarteles y hectáreas se cargarán desde su catálogo independiente.';
-  if(!confirm(message)){updateMapSelectorUI();return false;}
+  if(!options.fromHistory&&!confirm(message)){updateMapSelectorUI();return false;}
   if(!save()){toast('No se pudo guardar el mapa actual; cambio cancelado','err');updateMapSelectorUI();return false;}
   if(document.body.classList.contains('agro-fullscreen'))leaveFull();
   if($('agro-modal').classList.contains('show'))closeModal();
@@ -1977,7 +2148,7 @@ async function switchActiveMap(nextId){
   const spinner=document.createElement('div');spinner.id='loading-spinner';
   spinner.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i><p style="font-size:12.5px;margin:0">Preparando mapa seleccionado…</p><span style="font-size:10.5px;color:#4d6579">El catálogo de cuarteles se comprobará antes de permitir registros</span>';
   container.replaceChildren(spinner);
-  loadActiveMapFormState();updateMapSelectorUI();mapInstallMessage('');installLabel.textContent='Instalar mapa';
+  loadActiveMapFormState();updateMapSelectorUI();mapInstallMessage('');installLabel.textContent='Instalar todos los mapas';
   table();
   try{
     await loadSourceCatalog();
@@ -2146,26 +2317,26 @@ $('rep-save-btn').onclick = () => {
 /* ---------- historial con rango ---------- */
 let histFrom = '', histTo = '';
 
-function filteredGroups() {
-  const jornadas = loadJornadas(), groups = [];
-  // Compatibilidad: claves antiguas por fecha y claves nuevas únicas por guardado.
-  for (const [key, j] of Object.entries(jornadas)) {
-    if (!j || typeof j !== 'object') continue;
-    const date = j.fecha || key;
-    const snapshot = Array.isArray(j.detalle) ? j.detalle : Object.values(data.registros).filter(r => r.fecha === date);
-    groups.push([date, { key, rows: snapshot, jornada: j, saved: true }]);
+function filteredGroups(){
+  const jornadas=loadJornadas(),groups=[];
+  for(const [key,j] of Object.entries(jornadas)){
+    if(!j||typeof j!=='object')continue;
+    const date=j.fecha||key,mapId=j.mapId||'proyecto-2026',mapName=(!j.mapName||j.mapName===mapId)?mapNameForId(mapId):j.mapName;
+    const snapshot=Array.isArray(j.detalle)?j.detalle.map(r=>({...r,mapId:r.mapId||mapId,mapName:r.mapName||mapName})):
+      collectAllActiveRows().filter(r=>r.mapId===mapId&&r.fecha===date);
+    groups.push([date,{key,rows:snapshot,jornada:{...j,mapId,mapName},saved:true,mapId,mapName}]);
   }
-  const pending = new Map();
-  for (const r of Object.values(data.registros)) {
-    const date = r.fecha || 'Sin fecha';
-    if (!pending.has(date)) pending.set(date, []);
-    pending.get(date).push(r);
+  const pending=new Map();
+  for(const r of collectAllActiveRows()){
+    const date=r.fecha||'Sin fecha',mapId=r.mapId||'proyecto-2026',mapName=r.mapName||mapNameForId(mapId),key=mapId+'|'+date;
+    if(!pending.has(key))pending.set(key,{date,mapId,mapName,rows:[]});
+    pending.get(key).rows.push(r);
   }
-  for (const [date, rows] of pending) groups.push([date, { key: null, rows, jornada: null, saved: false }]);
-  return groups.sort((a, b) => b[0].localeCompare(a[0]) ||
-    String(b[1].jornada?.savedAt || '').localeCompare(String(a[1].jornada?.savedAt || '')))
-    .filter(([date]) => date === 'Sin fecha' ? !histFrom && !histTo :
-      (!histFrom || date >= histFrom) && (!histTo || date <= histTo));
+  for(const [key,item] of pending){
+    groups.push([item.date,{key:'pending:'+key,rows:item.rows,jornada:null,saved:false,mapId:item.mapId,mapName:item.mapName}]);
+  }
+  return groups.sort((a,b)=>b[0].localeCompare(a[0])||String(b[1].jornada?.savedAt||'').localeCompare(String(a[1].jornada?.savedAt||''))||String(a[1].mapName).localeCompare(String(b[1].mapName)))
+    .filter(([date])=>date==='Sin fecha'?!histFrom&&!histTo:(!histFrom||date>=histFrom)&&(!histTo||date<=histTo));
 }
 
 function historyDetail(label, value) {
@@ -2180,6 +2351,82 @@ function historyDetail(label, value) {
   return item;
 }
 
+const historyCatalogCache=new Map();
+async function loadHistoryCatalogSnapshot(mapId){
+  if(historyCatalogCache.has(mapId))return historyCatalogCache.get(mapId);
+  const promise=(async()=>{
+    await loadMapRegistry();
+    const cfg=mapRegistry.find(m=>m.id===mapId);if(!cfg)throw Error('Mapa no encontrado en el catálogo: '+mapId);
+    const [mr,cr,lr]=await Promise.all([fetch(cfg.manifest),fetch(cfg.catalog),fetch(cfg.labels)]);
+    if(!mr.ok||!cr.ok||!lr.ok)throw Error('No se pudieron abrir los metadatos de '+cfg.name+'.');
+    const [mb,cb,lb]=await Promise.all([mr.arrayBuffer(),cr.arrayBuffer(),lr.arrayBuffer()]);
+    const digest=async b=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b))).map(x=>x.toString(16).padStart(2,'0')).join('');
+    if(await digest(mb)!==cfg.manifestHash||await digest(cb)!==cfg.catalogHash||await digest(lb)!==cfg.labelsHash)
+      throw Error('La huella SHA-256 del mapa '+cfg.name+' no coincide.');
+    const manifest=JSON.parse(new TextDecoder().decode(mb)),catalog=JSON.parse(new TextDecoder().decode(cb)),labels=JSON.parse(new TextDecoder().decode(lb));
+    verifyCatalogDeclarations(catalog,mapId);
+    const manifestSource=manifest.sourceSvgSHA256||manifest.origenSHA256||
+      (mapId==='proyecto-2026'&&manifest.version==='v34-9-proyecto-2026'?cfg.sourceSvgHash:null);
+    if(manifest.version!==cfg.manifestVersion||manifestSource!==cfg.sourceSvgHash||
+      catalog.version!==cfg.catalogVersion||catalog.origenSHA256!==cfg.sourceSvgHash||
+      catalog.cantidadEtiquetas!==cfg.cuartelCount||catalog.cuarteles?.length!==cfg.cuartelCount||labels.length!==cfg.labelsCount)
+      throw Error('Manifiesto, catálogo o etiquetas no corresponden a '+cfg.name+'.');
+    const byId=new Map(),byName=new Map();
+    for(const item of catalog.cuarteles){
+      if(!item.id||byId.has(item.id)||!Number.isFinite(Number(item.hectareas))||Number(item.hectareas)<=0)
+        throw Error('Catálogo inválido en '+cfg.name+'.');
+      if(cfg.id!=='proyecto-2026'){
+        const name=labels[item.fuenteNombreIndice],area=labels[item.fuenteSuperficieIndice];
+        if(!name||!area||String(name.text||'').trim()!==item.nombre||String(area.text||'').trim()!==item.etiquetaSuperficie||
+          Math.abs(Number(name.x)-Number(item.x))>0.001||Math.abs(Number(name.y)-Number(item.y))>0.001)
+          throw Error('Etiqueta original no coincide para '+item.nombre+' en '+cfg.name+'.');
+        const match=String(area.text||'').match(/(\d+(?:[.,]\d+)?)\s*ha/i);
+        if(!match||Math.round(Number(match[1].replace(',','.'))*100)!==Math.round(Number(item.hectareas)*100))
+          throw Error('Superficie original no coincide para '+item.nombre+' en '+cfg.name+'.');
+        const valid=item.estado==='ASOCIACION_UNICA'||item.estado==='ASOCIACION_POR_UBICACION';
+        const manual=item.revisionManual===true&&item.revisionManualVersion==='v34-9-confirmacion-visual-supervisor';
+        if(valid&&!manual&&(!item.asociacionMutua||Number(item.distanciaEtiquetas)>15||Number(item.ratioSegundaOpcion)<1.25))
+          throw Error('Asociación espacial sin validar para '+item.nombre+' en '+cfg.name+'.');
+      }
+      byId.set(item.id,item);const key=normalizeCuartel(item.nombre),list=byName.get(key)||[];list.push(item);byName.set(key,list);
+    }
+    verifyCompositeAreaRules(byId,labels,mapId);
+    return {config:cfg,byId,byName};
+  })().catch(err=>{historyCatalogCache.delete(mapId);throw err;});
+  historyCatalogCache.set(mapId,promise);return promise;
+}
+function historySourceForRow(row,snapshot,mapId){
+  if(row?.mapId&&row.mapId!==mapId)return null;
+  if(!row?.mapId&&mapId!=='proyecto-2026')return null;
+  if(row?.cuartelId){const src=snapshot.byId.get(row.cuartelId);return src&&(src.estado==='ASOCIACION_UNICA'||src.estado==='ASOCIACION_POR_UBICACION')&&normalizeCuartel(src.nombre)===normalizeCuartel(row.name)?src:null;}
+  const list=snapshot.byName.get(normalizeCuartel(row?.name))||[];
+  return list.length===1&&list[0].estado==='ASOCIACION_UNICA'?list[0]:null;
+}
+function historyDisplayName(row,snapshot,mapId){
+  const src=historySourceForRow(row,snapshot,mapId);if(!src)return row?.name||'Cuartel';
+  const same=snapshot.byName.get(normalizeCuartel(src.nombre))||[];
+  return same.length>1?src.nombre+' · '+fmt(expectedHectares(src,mapId))+' ha':src.nombre;
+}
+function historyAreaBreakdown(row,snapshot,mapId){
+  const src=historySourceForRow(row,snapshot,mapId);if(!src)return fmt(row?.ha)+' ha';
+  return areaBreakdownForSource(src,mapId);
+}
+async function auditRowsForMap(rows,mapId,snapshot=null){
+  const problems=[];
+  try{snapshot=snapshot||await loadHistoryCatalogSnapshot(mapId);}catch(err){return [{name:'CATÁLOGO '+mapId,reason:err?.message||String(err)}];}
+  for(const row of rows){
+    const src=historySourceForRow(row,snapshot,mapId);
+    if(!src){problems.push({name:row?.name||'Sin nombre',reason:'Código, ID geográfico o mapa de origen no coincide con el catálogo oficial.'});continue;}
+    const reasons=[],expected=expectedHectares(src,mapId),rule=areaRuleForSource(src,mapId),ha=Number(row?.ha);
+    if(row?.catalogo&&row.catalogo!==snapshot.config.catalogVersion)reasons.push('Versión de catálogo distinta.');
+    if(row?.origenSHA256&&row.origenSHA256!==snapshot.config.sourceSvgHash)reasons.push('Huella del SVG distinta.');
+    if(!Number.isFinite(ha)||Math.round(ha*100)!==Math.round(expected*100))reasons.push('Registro '+(Number.isFinite(ha)?fmt(ha):'sin valor')+' ha; plano '+fmt(expected)+' ha.');
+    if(rule&&!splitComponentsMatch(row,src,mapId))reasons.push('Desglose de superficies compuestas ausente o distinto.');
+    if(reasons.length)problems.push({name:historyDisplayName(row,snapshot,mapId),reason:reasons.join(' ')});
+  }
+  return problems;
+}
+
 function archivedSpecialRowsCanBeRectified(rows) {
   const invalid=rows.filter(r=>auditRows([r]).length);
   return invalid.length>0&&invalid.every(r=>{
@@ -2187,9 +2434,11 @@ function archivedSpecialRowsCanBeRectified(rows) {
     return !!src&&!!areaRuleForSource(src);
   });
 }
-function rectifyArchivedSpecialRows(entryKey) {
+async function rectifyArchivedSpecialRows(entryKey,mapId=null){
   const store=loadJornadas(),j=store[entryKey];
   if(!j||!Array.isArray(j.detalle)){toast('No se encontró la jornada archivada','err');return;}
+  mapId=mapId||j.mapId||j.detalle[0]?.mapId||'proyecto-2026';
+  if(mapId!==activeMapId&&!await switchActiveMap(mapId,{fromHistory:true}))return;
   const invalid=j.detalle.filter(r=>auditRows([r]).length);
   if(!invalid.length||!archivedSpecialRowsCanBeRectified(j.detalle)){toast('La jornada contiene errores que requieren revisión individual; no se modificó.','err');return;}
   const lines=invalid.map(r=>{
@@ -2204,9 +2453,9 @@ function rectifyArchivedSpecialRows(entryKey) {
     const src=sourceForRow(row),rule=areaRuleForSource(src),expected=expectedHectares(src);
     const snapshot=areaComponentsSnapshot(src),old=Number(row.ha);
     const event={tipo:'RECTIFICACION_SUPERFICIE_COMPUESTA',anteriorHa:old,nuevaHa:expected,
-      desgloseNuevo:snapshot,reglaSuperficie:AREA_RULE_VERSION,fechaOriginal:j.fecha||'Sin fecha',
+      desgloseNuevo:snapshot,reglaSuperficie:areaRuleVersion(rule),fechaOriginal:j.fecha||'Sin fecha',
       corregidoEn:new Date().toISOString(),fuenteSHA256:mapConfig.sourceSvgHash,mapId:activeMapId};
-    row.ha=expected;row.areaRuleVersion=AREA_RULE_VERSION;row.areaComponents=snapshot;
+    row.ha=expected;row.areaRuleVersion=areaRuleVersion(rule);row.areaComponents=snapshot;
     row.correcciones=[...(Array.isArray(row.correcciones)?row.correcciones:[]),event];
   }
   j.total=j.detalle.reduce((n,r)=>n+(Number(r.ha)||0),0);
@@ -2215,27 +2464,29 @@ function rectifyArchivedSpecialRows(entryKey) {
   toast('Jornada rectificada con desglose y auditoría.','ok');
 }
 
-function historyExtract(date, rows, j) {
-  const dateText = date === 'Sin fecha' ? 'Sin fecha' : date.split('-').reverse().join('-');
-  const issues=auditRows(rows);if(issues.length)throw Error('Extracto histórico BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
-  const total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
-  const lines = [
+async function historyExtract(date,rows,j,mapId=null,snapshot=null){
+  mapId=mapId||j?.mapId||rows[0]?.mapId||'proyecto-2026';
+  snapshot=snapshot||await loadHistoryCatalogSnapshot(mapId);
+  const dateText=date==='Sin fecha'?'Sin fecha':date.split('-').reverse().join('-');
+  const issues=await auditRowsForMap(rows,mapId,snapshot);
+  if(issues.length)throw Error('Extracto histórico BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
+  const total=rows.reduce((n,r)=>n+(Number(r.ha)||0),0);
+  return [
     '*📋 EXTRACTO DE JORNADA · AGRO VALLE*',
-    '*📅 Fecha:* ' + dateText,
-    '*🗺️ Mapa de registro:* ' + (j?.mapName || mapConfig.name),
-    '*🏢 Empresa:* ' + (j?.company || '—'),
-    '*👤 Contratista:* ' + (j?.contractor || '—'),
-    '*👨‍💼 Supervisor:* ' + (j?.supervisor || '—'),
-    '*📍 Predio:* ' + (j?.farm || '—'),
-    '*🌿 Sector:* ' + (j?.sector || '—'),
-    '*👥 Personal:* ' + (j?.people == null ? '—' : j.people + ' personas'),
-    '*💧 Mezcla utilizada:* ' + (j?.mixture || '—'), '',
+    '*📅 Fecha:* '+dateText,
+    '*🗺️ Mapa de registro:* '+(j?.mapName||snapshot.config.name),
+    '*🏢 Empresa:* '+(j?.company||'—'),
+    '*👤 Contratista:* '+(j?.contractor||'—'),
+    '*👨‍💼 Supervisor:* '+(j?.supervisor||'—'),
+    '*📍 Predio:* '+(j?.farm||'—'),
+    '*🌿 Sector:* '+(j?.sector||'—'),
+    '*👥 Personal:* '+(j?.people==null?'—':j.people+' personas'),
+    '*💧 Mezcla utilizada:* '+(j?.mixture||'—'), '',
     '*📍 CUARTELES Y HECTÁREAS*',
-    ...rows.map(r => '• ' + displayCuartel(r) + ': ' + areaBreakdownForRow(r) + (r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
-    '*Cuarteles:* ' + rows.length,
-    '*🏁 TOTAL APLICADO: ' + fmt(total) + ' ha*'
-  ];
-  return lines.join('\n');
+    ...rows.map(r=>'• '+historyDisplayName(r,snapshot,mapId)+': '+historyAreaBreakdown(r,snapshot,mapId)+(r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
+    '*Cuarteles:* '+rows.length,
+    '*🏁 TOTAL APLICADO: '+fmt(total)+' ha*'
+  ].join('\n');
 }
 
 async function shareHistoryExtract(text) {
@@ -2253,134 +2504,105 @@ async function shareHistoryExtract(text) {
   toast('Si WhatsApp no se abre, pega el extracto copiado.', 'warn');
 }
 
-function renderHistory() {
-  const host = $('av-history-list'); host.replaceChildren();
-  const groups = filteredGroups();
-  let totalHa = 0, totalCuarteles = 0;
-  for (const [, entry] of groups) {
-    totalHa += entry.rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
-    totalCuarteles += entry.rows.length;
+let historyRenderSequence=0;
+async function renderHistory(){
+  const sequence=++historyRenderSequence,host=$('av-history-list');host.replaceChildren();
+  try{await loadMapRegistry();}catch(e){}
+  const groups=filteredGroups(),prepared=[];
+  for(const [date,entry] of groups){
+    const mapId=entry.mapId||entry.jornada?.mapId||entry.rows[0]?.mapId||'proyecto-2026';
+    let snapshot=null,errors=[];
+    try{snapshot=await loadHistoryCatalogSnapshot(mapId);errors=await auditRowsForMap(entry.rows,mapId,snapshot);}
+    catch(err){errors=[{name:'CATÁLOGO',reason:err?.message||String(err)}];}
+    prepared.push({date,entry,mapId,snapshot,errors});
   }
-  $('hs-jornadas').textContent = groups.length;
-  $('hs-cuarteles').textContent = totalCuarteles;
-  $('hs-ha').textContent = auditRows(groups.flatMap(([,entry])=>entry.rows)).length ? 'REVISAR' : fmt(totalHa)+' ha';
+  if(sequence!==historyRenderSequence)return;
+  const totalHa=prepared.reduce((n,x)=>n+x.entry.rows.reduce((a,r)=>a+(Number(r.ha)||0),0),0);
+  const totalRows=prepared.reduce((n,x)=>n+x.entry.rows.length,0);
+  const anyErrors=prepared.some(x=>x.errors.length);
+  $('hs-jornadas').textContent=prepared.length;
+  $('hs-cuarteles').textContent=totalRows;
+  $('hs-ha').textContent=anyErrors?'REVISAR':fmt(totalHa)+' ha';
+  if(!prepared.length){const p=document.createElement('p');p.className='empty';p.innerHTML='<i class="fa-solid fa-calendar-xmark"></i>Sin jornadas en el rango seleccionado.';host.append(p);return;}
 
-  if (!groups.length) {
-    const p = document.createElement('p'); p.className = 'empty';
-    p.innerHTML = '<i class="fa-solid fa-calendar-xmark"></i>Sin jornadas en el rango seleccionado.';
-    host.append(p); return;
-  }
-
-  for (const [date, entry] of groups) {
-    const { rows, jornada: j, saved } = entry;
-    const sum = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
-    const card = document.createElement('article'); card.className = 'hist-card';
-    const title = document.createElement('h3');
-    title.textContent = date === 'Sin fecha' ? 'Registros anteriores sin fecha' : date.split('-').reverse().join('-');
-    if(j?.mapName)title.textContent+=' · '+j.mapName;
-    if (saved) { const sameDay = groups.filter(([d, e]) => d === date && e.saved); if (sameDay.length > 1) title.textContent += ' · Jornada ' + (sameDay.length - sameDay.findIndex(([, e]) => e.key === entry.key)); }
+  for(const item of prepared){
+    const {date,entry,mapId,snapshot,errors}=item,{rows,jornada:j,saved}=entry;
+    const sum=rows.reduce((n,r)=>n+(Number(r.ha)||0),0);
+    const card=document.createElement('article');card.className='hist-card';
+    const title=document.createElement('h3');
+    title.textContent=(date==='Sin fecha'?'Registros anteriores sin fecha':date.split('-').reverse().join('-'))+' · '+(j?.mapName||entry.mapName||mapNameForId(mapId));
+    if(saved){const sameDay=prepared.filter(x=>x.date===date&&x.entry.saved&&x.mapId===mapId);if(sameDay.length>1)title.textContent+=' · Jornada '+(sameDay.length-sameDay.findIndex(x=>x.entry.key===entry.key));}
     card.append(title);
-    const meta = document.createElement('div'); meta.className = 'hist-meta';
-    const auditedErrors=auditRows(rows);
-    for (const [label, value] of [['Cuarteles', rows.length], ['Hectáreas', auditedErrors.length?'REVISAR':fmt(sum)+' ha']]) {
-      const span = document.createElement('span'); span.append(document.createTextNode(label + ' '));
-      const bold = document.createElement('b'); bold.textContent = value; span.append(bold); meta.append(span);
+    const meta=document.createElement('div');meta.className='hist-meta';
+    for(const [label,value] of [['Cuarteles',rows.length],['Hectáreas',errors.length?'REVISAR':fmt(sum)+' ha']]){
+      const span=document.createElement('span');span.append(document.createTextNode(label+' '));const bold=document.createElement('b');bold.textContent=value;span.append(bold);meta.append(span);
     }
-    if (saved) {
-      const badge = document.createElement('span'); badge.className = 'chip';
-      badge.textContent = 'Jornada guardada'; meta.append(badge);
-    } else {
-      const badge = document.createElement('span'); badge.style.color = '#fbbf24';
-      badge.textContent = 'Pendiente de guardar'; meta.append(badge);
-    }
-    card.append(meta);
+    const badge=document.createElement('span');badge.className='chip';badge.textContent=saved?'Jornada guardada':'Pendiente de guardar';if(!saved)badge.style.color='#fbbf24';meta.append(badge);card.append(meta);
 
-    const details = document.createElement('div'); details.className = 'hist-rows';
-    if (j) {
-      const section = document.createElement('p'); section.className = 'sec-title';
-      section.style.marginTop = '12px'; section.textContent = 'Datos de la jornada'; details.append(section);
-      for (const [label, value] of [
-        ['Fecha', date === 'Sin fecha' ? '—' : date.split('-').reverse().join('-')],
-        ['Mapa de registro',j.mapName||mapConfig.name],['Empresa', j.company], ['Contratista', j.contractor],
-        ['Supervisor', j.supervisor], ['Sector', j.sector],
-        ['Predio', j.farm], ['Personal', j.people == null ? '—' : j.people + ' personas'],
-        ['Mezcla utilizada', j.mixture]
-      ]) details.append(historyDetail(label, value));
-    } else {
-      const note = document.createElement('p'); note.className = 'av-muted';
-      note.textContent = 'Los datos generales aún no se han guardado para esta fecha.';
-      details.append(note);
+    const details=document.createElement('div');details.className='hist-rows';
+    if(j){
+      const section=document.createElement('p');section.className='sec-title';section.style.marginTop='12px';section.textContent='Datos de la jornada';details.append(section);
+      for(const [label,value] of [
+        ['Fecha',date==='Sin fecha'?'—':date.split('-').reverse().join('-')],['Mapa de registro',j.mapName||entry.mapName||mapNameForId(mapId)],
+        ['Empresa',j.company],['Contratista',j.contractor],['Supervisor',j.supervisor],['Sector',j.sector],['Predio',j.farm],
+        ['Personal',j.people==null?'—':j.people+' personas'],['Mezcla utilizada',j.mixture]
+      ])details.append(historyDetail(label,value));
+    }else{const note=document.createElement('p');note.className='av-muted';note.textContent='Los datos generales aún no se han guardado para esta fecha.';details.append(note);}
+    const heading=document.createElement('p');heading.className='sec-title';heading.style.marginTop='15px';heading.textContent='Cuarteles y hectáreas';details.append(heading);
+    if(!rows.length)details.append(historyDetail('Cuarteles','Sin cuarteles registrados'));
+    for(const r of rows){
+      const label=snapshot?historyDisplayName(r,snapshot,mapId):(r.name||'Cuartel');
+      const value=snapshot?historyAreaBreakdown(r,snapshot,mapId):(fmt(r.ha)+' ha');
+      details.append(historyDetail(label,value+(r.correcciones?.length?' · RECTIFICADO':'')));
     }
-    const heading = document.createElement('p'); heading.className = 'sec-title';
-    heading.style.marginTop = '15px'; heading.textContent = 'Cuarteles y hectáreas'; details.append(heading);
-    if (!rows.length) details.append(historyDetail('Cuarteles', 'Sin cuarteles registrados'));
-    for (const r of rows) details.append(historyDetail(displayCuartel(r), areaBreakdownForRow(r) + (r.correcciones?.length?' · RECTIFICADO':'')));
-    const errors=auditRows(rows);
     if(errors.length){const warning=document.createElement('p');warning.style.cssText='color:#fb7185;font-weight:800';warning.textContent='⚠ PENDIENTE DE AUDITORÍA: '+errors.slice(0,3).map(p=>p.name+' '+p.reason).join(' | ');details.append(warning);}
-    const total = historyDetail('TOTAL APLICADO', errors.length?'NO VALIDADO':fmt(sum) + ' ha');
-    total.style.cssText = 'font-weight:900;color:#34d399;border-top:1px solid rgba(52,211,153,.35);margin-top:8px';
-    details.append(total); card.append(details);
+    const total=historyDetail('TOTAL APLICADO',errors.length?'NO VALIDADO':fmt(sum)+' ha');
+    total.style.cssText='font-weight:900;color:#34d399;border-top:1px solid rgba(52,211,153,.35);margin-top:8px';details.append(total);card.append(details);
 
-    const actions = document.createElement('div'); actions.className = 'hist-actions';
-    const toggle = document.createElement('button'); toggle.className = 'btn btn-sm';
-    toggle.innerHTML = '<i class="fa-solid fa-list"></i>Ver jornada completa';
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.onclick = () => {
-      const open = details.classList.toggle('open');
-      toggle.setAttribute('aria-expanded', String(open));
-      toggle.innerHTML = open ? '<i class="fa-solid fa-chevron-up"></i>Ocultar detalles' : '<i class="fa-solid fa-list"></i>Ver jornada completa';
-    };
-    actions.append(toggle);
-    if(saved&&archivedSpecialRowsCanBeRectified(rows)){
-      const rectify=document.createElement('button');rectify.type='button';rectify.className='btn btn-sm';
-      rectify.innerHTML='<i class="fa-solid fa-shield-halved"></i>Rectificar superficies compuestas';
-      rectify.onclick=()=>rectifyArchivedSpecialRows(entry.key);
-      actions.append(rectify);
+    const actions=document.createElement('div');actions.className='hist-actions';
+    const toggle=document.createElement('button');toggle.className='btn btn-sm';toggle.innerHTML='<i class="fa-solid fa-list"></i>Ver jornada completa';toggle.setAttribute('aria-expanded','false');
+    toggle.onclick=()=>{const open=details.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.innerHTML=open?'<i class="fa-solid fa-chevron-up"></i>Ocultar detalles':'<i class="fa-solid fa-list"></i>Ver jornada completa';};actions.append(toggle);
+
+    const canRectify=saved&&errors.length&&snapshot&&errors.every(error=>{
+      const row=rows.find(r=>historyDisplayName(r,snapshot,mapId)===error.name)||rows.find(r=>r.name===error.name);
+      const src=row?historySourceForRow(row,snapshot,mapId):null;return !!src&&!!areaRuleForSource(src,mapId);
+    });
+    if(canRectify){const rectify=document.createElement('button');rectify.type='button';rectify.className='btn btn-sm';rectify.innerHTML='<i class="fa-solid fa-shield-halved"></i>Rectificar superficies compuestas';rectify.onclick=()=>rectifyArchivedSpecialRows(entry.key,mapId);actions.append(rectify);}
+
+    const share=document.createElement('button');share.type='button';share.className='btn btn-sm';share.innerHTML='<i class="fa-brands fa-whatsapp"></i>Compartir por WhatsApp';
+    share.onclick=async()=>{try{const text=await historyExtract(date,rows,j,mapId,snapshot);await shareHistoryExtract(text);}catch(err){toast(err.message,'err');alert(err.message);}};actions.append(share);
+
+    if(date!=='Sin fecha'){
+      const open=document.createElement('button');open.className='btn btn-sm btn-primary';open.innerHTML='<i class="fa-solid fa-pen-to-square"></i>Abrir en panel';
+      open.onclick=async()=>{
+        try{
+          if(!await switchActiveMap(mapId,{fromHistory:true}))return;
+          await loadSourceCatalog();
+          rep('date').value=date;
+          if(j){for(const id of ['company','contractor','supervisor','sector','farm'])if(j[id]!=null)rep(id).value=j[id];
+            if(j.people!=null)rep('people').value=j.people;
+            if(j.mixture!=null){const match=Object.entries(mixtures).find(([,text])=>text===j.mixture);rep('mixture').value=match?match[0]:'other';rep('custom').value=match?'':j.mixture;toggleCustom();}}
+          historicalPanel={rows:rows.map(r=>({name:r.name,cuartelId:r.cuartelId||null,mapId:r.mapId||mapId,mapName:r.mapName||j?.mapName||mapNameForId(mapId),
+            catalogo:r.catalogo||j?.catalogo||mapConfig.catalogVersion,origenSHA256:r.origenSHA256||j?.origenSHA256||mapConfig.sourceSvgHash,ha:Number(r.ha)||0,
+            areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
+            correcciones:Array.isArray(r.correcciones)?r.correcciones:[]})),key:entry.key};
+          persistReport();renderReportRows();switchTab('panel');
+          toast('Jornada de '+mapNameForId(mapId)+' abierta con '+rows.length+' cuarteles y '+fmt(sum)+' ha.','ok');
+        }catch(err){toast('No se pudo abrir la jornada: '+(err.message||err),'err');}
+      };actions.append(open);
     }
-    const share = document.createElement('button');
-    share.type = 'button'; share.className = 'btn btn-sm';
-    share.innerHTML = '<i class="fa-brands fa-whatsapp"></i>Compartir por WhatsApp';
-    share.onclick = () => {try{const text=historyExtract(date,rows,j);shareHistoryExtract(text);}catch(err){toast(err.message,'err');alert(err.message);}};
-    actions.append(share);
-    if (date !== 'Sin fecha') {
-      const open = document.createElement('button'); open.className = 'btn btn-sm btn-primary';
-      open.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>Abrir en panel';
-      open.onclick = () => {
-        rep('date').value = date;
-        if (j) {
-          for (const id of ['company', 'contractor', 'supervisor', 'sector', 'farm'])
-            if (j[id] != null) rep(id).value = j[id];
-          if (j.people != null) rep('people').value = j.people;
-          if (j.mixture != null) {
-            const match = Object.entries(mixtures).find(([, text]) => text === j.mixture);
-            rep('mixture').value = match ? match[0] : 'other';
-            rep('custom').value = match ? '' : j.mixture;
-            toggleCustom();
-          }
-        }
-        historicalPanel = { rows: rows.map(r => ({ name:r.name,cuartelId:r.cuartelId||null,
-          mapId:r.mapId||j?.mapId||activeMapId,mapName:r.mapName||j?.mapName||mapConfig.name,
-          catalogo:r.catalogo||j?.catalogo||mapConfig.catalogVersion,
-          origenSHA256:r.origenSHA256||j?.origenSHA256||mapConfig.sourceSvgHash,ha:Number(r.ha)||0,
-          areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
-          correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })), key: entry.key };
-        persistReport(); renderReportRows(); switchTab('panel');
-        toast('Jornada archivada cargada con ' + rows.length + ' cuarteles y ' + fmt(sum) + ' ha.', 'ok');
-      };
-      actions.append(open);
-    }
-    const del = document.createElement('button'); del.className = 'btn btn-sm btn-danger';
-    del.innerHTML = '<i class="fa-solid fa-trash-can"></i>Borrar';
-    del.onclick = () => {
-      if (!confirm('¿Borrar esta jornada del ' + date + '?')) return;
-      if (!saved) for (const [id, r] of Object.entries(data.registros))
-        if ((r.fecha || 'Sin fecha') === date) delete data.registros[id];
-      const jornadas = loadJornadas();
-      if (entry.key && jornadas[entry.key]) { delete jornadas[entry.key]; saveJornadas(jornadas); }
-      if (historicalPanel?.key === entry.key) { clearHistoricalPanel(); renderReportRows(); }
-      save(); drawFlags(); table(); renderHistory(); toast('Jornada borrada', 'warn');
-    };
-    actions.append(del); card.append(actions); host.append(card);
+
+    const del=document.createElement('button');del.className='btn btn-sm btn-danger';del.innerHTML='<i class="fa-solid fa-trash-can"></i>Borrar';
+    del.onclick=()=>{
+      if(!confirm('¿Borrar esta jornada del '+date+' en '+(j?.mapName||entry.mapName||mapId)+'?'))return;
+      if(!saved){
+        const target=readStoredMapDataForMap(mapId);
+        for(const r of rows){const id=r.cuartelId||Object.keys(target.registros).find(k=>target.registros[k]?.name===r.name&&target.registros[k]?.fecha===date);if(id)delete target.registros[id];}
+        try{localStorage.setItem(storeKeyForMap(mapId),JSON.stringify(target));if(mapId===activeMapId)data=target;}catch(e){toast('No se pudo guardar la eliminación','err');return;}
+      }else{const jornadas=loadJornadas();if(entry.key&&jornadas[entry.key]){delete jornadas[entry.key];if(!saveJornadas(jornadas)){toast('No se pudo borrar la jornada','err');return;}}}
+      if(historicalPanel?.key===entry.key){clearHistoricalPanel();renderReportRows();}
+      if(mapId===activeMapId){save();drawFlags();table();}renderHistory();toast('Jornada borrada','warn');
+    };actions.append(del);card.append(actions);host.append(card);
   }
 }
 
@@ -2406,25 +2628,22 @@ document.querySelectorAll('.quick button[data-range]').forEach(b => {
     renderHistory();
   };
 });
-$('hist-export').onclick = () => {
-  const groups = filteredGroups();
-  if (!groups.length) { toast('Nada que exportar en ese rango', 'warn'); return; }
-  const rows = [['Mapa ID','Mapa','Fecha','Cuartel','Hectareas total','Desglose de hectareas','Rectificaciones - detalle','Empresa','Contratista','Supervisor','Predio','Sector','Personal','Mezcla utilizada']];
-  if(!mustBeAudited(groups.flatMap(([,entry])=>entry.rows),'exportar el historial'))return;
-  const j = loadJornadas();
-  for (const [date, entry] of groups) {
-    for (const r of entry.rows) {
-      const meta = entry.jornada || {};
+$('hist-export').onclick=async()=>{
+  const groups=filteredGroups();if(!groups.length){toast('Nada que exportar en ese rango','warn');return;}
+  const rows=[['Mapa ID','Mapa','Fecha','Cuartel','Hectareas total','Desglose de hectareas','Rectificaciones - detalle','Empresa','Contratista','Supervisor','Predio','Sector','Personal','Mezcla utilizada']];
+  for(const [date,entry] of groups){
+    const mapId=entry.mapId||entry.jornada?.mapId||entry.rows[0]?.mapId||'proyecto-2026';
+    let snapshot;try{snapshot=await loadHistoryCatalogSnapshot(mapId);}catch(err){toast('Exportación bloqueada: '+err.message,'err');return;}
+    const issues=await auditRowsForMap(entry.rows,mapId,snapshot);if(issues.length){toast('Exportación bloqueada: '+issues.slice(0,3).map(x=>x.name).join(', '),'err');return;}
+    const meta=entry.jornada||{};
+    for(const r of entry.rows){
       const changes=Array.isArray(r.correcciones)?r.correcciones.map(c=>String(c.anteriorHa)+' ha -> '+String(c.nuevaHa)+' ha ('+(c.corregidoEn||'sin hora')+')').join(' | '):'';
-      rows.push([meta.mapId||activeMapId,meta.mapName||mapConfig.name,date,displayCuartel(r),fmt(r.ha),areaBreakdownForRow(r),changes||'NO',meta.company||'',meta.contractor||'',meta.supervisor||'',meta.farm||'',meta.sector||'',String(meta.people??''),meta.mixture||'']);
+      rows.push([mapId,meta.mapName||entry.mapName||snapshot.config.name,date,historyDisplayName(r,snapshot,mapId),fmt(r.ha),historyAreaBreakdown(r,snapshot,mapId),changes||'NO',meta.company||'',meta.contractor||'',meta.supervisor||'',meta.farm||'',meta.sector||'',String(meta.people??''),meta.mixture||'']);
     }
   }
-  const csv = '\uFEFF' + rows.map(l => l.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = 'agrovalle_historial_' + (histFrom || 'inicio') + '_' + (histTo || 'fin') + '.csv';
-  a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000);
-  toast('CSV exportado', 'ok');
+  const csv='\uFEFF'+rows.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;
+  a.download='agrovalle_historial_multimapa_'+(histFrom||'inicio')+'_'+(histTo||'fin')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Historial multi-mapa exportado','ok');
 };
 
 /* ---------- navegación ---------- */

@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.9 Multi-mapa</title>
+<title>GESTION AGRICOLA · V34.10 Historial visual</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+<link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
+<link rel="shortcut icon" href="./assets/favicon.ico">
 <meta name="theme-color" content="#04080f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +16,7 @@
 <style>
 :root{
   --bg:#04080f; --panel:#0b1524; --line:rgba(56,189,248,.14);
-  --txt:#e8f1fb; --muted:#8ba1b8;
+  --txt:#f0f6fc; --muted:#a9bfd3;
   --cyan:#22d3ee; --violet:#a78bfa; --lime:#a3e635; --emerald:#34d399;
   --amber:#fbbf24; --red:#fb7185; --rail:78px;
 }
@@ -78,6 +81,7 @@ body.agro-fullscreen #agro-modal{z-index:150}
 .top-actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;
   margin-left:auto;min-width:0;white-space:nowrap}
 .top-actions .pill{justify-content:center}
+.sun-toggle{cursor:pointer;font:inherit}
 #install-map{white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;padding:6px 11px;
   border-radius:999px;border:1px solid var(--line);color:#9fd8e8;background:rgba(34,211,238,.07)}
@@ -261,7 +265,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 .toast.warn{border-color:rgba(251,191,36,.5);color:#fde68a}
 .toast.err{border-color:rgba(251,113,133,.5);color:#fecdd3}
 
-.av-muted{font-size:12px;color:#8ba1b8;line-height:1.6}
+.av-muted{font-size:12px;color:#a9bfd3;line-height:1.6}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:rgba(100,140,175,.3);border-radius:6px}
 #rep-preview{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -305,6 +309,64 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
   #install-map{font-size:9px;padding:5px 5px}
 }
 #audit-notice[hidden],#rep-date-override[hidden]{display:none!important}
+
+/* V34.10: vista histórica del mapa */
+#history-map-banner{position:absolute;left:12px;right:64px;top:60px;z-index:24;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:9px 11px;border:1px solid rgba(34,211,238,.75);border-radius:13px;
+  background:rgba(3,12,22,.97);color:#f8fcff;box-shadow:0 8px 26px rgba(0,0,0,.42)}
+#history-map-banner[hidden]{display:none!important}
+.history-map-copy{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.history-map-copy>i{color:#67e8f9}
+#history-map-title{font-size:11px;font-weight:900;letter-spacing:.06em}
+#history-map-meta{font-size:10.5px;color:#d4e8f7;font-weight:700}
+#history-map-back{min-height:36px;padding:7px 10px;background:#10263a;border-color:#8bdcf7;color:#fff}
+#history-map-banner .btn{white-space:nowrap}
+
+/* V34.10: alto contraste para trabajo en exteriores; no altera el SVG ni la imagen satelital. */
+body.sunlight-mode{
+  --bg:#02060b;--panel:#071321;--line:rgba(155,218,255,.58);
+  --txt:#ffffff;--muted:#e0edf8;
+}
+body.sunlight-mode .aurora,body.sunlight-mode .grid-bg{opacity:.12}
+body.sunlight-mode .topbar{background:#030a13;border-bottom:2px solid #76cfff;backdrop-filter:none}
+body.sunlight-mode .brand h1{background:none;color:#fff;-webkit-text-fill-color:#fff;text-shadow:0 1px 0 #000}
+body.sunlight-mode .pill{background:#061a2a;border:1px solid #8bdcff;color:#f4fbff}
+body.sunlight-mode .card,body.sunlight-mode .hist-card,body.sunlight-mode .kpi{
+  background:#071522;border:1px solid #5b8eae;backdrop-filter:none;box-shadow:0 5px 18px rgba(0,0,0,.45)}
+body.sunlight-mode .card-head h2,body.sunlight-mode .kpi label,body.sunlight-mode .f label,
+body.sunlight-mode .sec-title,body.sunlight-mode thead th,body.sunlight-mode .hist-meta,
+body.sunlight-mode .hist-row,body.sunlight-mode .av-muted,body.sunlight-mode .empty{
+  color:#e4f3ff!important}
+body.sunlight-mode .kpi strong,body.sunlight-mode .hist-meta b{color:#fff}
+body.sunlight-mode .av-input,body.sunlight-mode #agro-modal input{
+  background:#020910;color:#fff;border:2px solid #8bbbd8;min-height:50px;font-size:15px}
+body.sunlight-mode .av-input::placeholder{color:#c0d5e5}
+body.sunlight-mode .btn{min-height:44px;font-size:14px;color:#fff;background:#10263a;border:1.5px solid #91c9e8;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+body.sunlight-mode .btn-sm{min-height:40px;font-size:12.5px}
+body.sunlight-mode .btn-primary{background:linear-gradient(135deg,#5eead4,#22d3ee 48%,#818cf8);color:#00131d;border:2px solid #b9f4ff}
+body.sunlight-mode .btn-lime{background:linear-gradient(135deg,#d9f99d,#84cc16);color:#102000;border:2px solid #efffbe}
+body.sunlight-mode .map-tools button{width:48px;height:48px;background:#031321;color:#fff;border:2px solid #a8e4ff;box-shadow:0 4px 14px #000}
+body.sunlight-mode .map-top .btn,body.sunlight-mode .legend,body.sunlight-mode #detected-panel,
+body.sunlight-mode #map-detail-status{background:#031321;color:#fff;border:1.5px solid #8bdcff;backdrop-filter:none}
+body.sunlight-mode .legend{font-size:12px;color:#f4fbff}
+body.sunlight-mode .det-item{background:#0a2134;color:#fff;border-color:#416d89;font-size:13px}
+body.sunlight-mode .det-item span{color:#e0f2ff}
+body.sunlight-mode .tbl-wrap{border:1.5px solid #638eaa}
+body.sunlight-mode thead th{background:#10283a}
+body.sunlight-mode tbody td{border-bottom-color:#385a70}
+body.sunlight-mode #agro-modal{background:rgba(0,0,0,.88);backdrop-filter:none}
+body.sunlight-mode #agro-modal-panel{background:#061522;border:2px solid #7edcff;box-shadow:0 20px 70px #000}
+body.sunlight-mode .toast{background:#020a12;color:#fff;border:1.5px solid #8bdcff}
+body.sunlight-mode #history-map-banner{background:#020b14;border:2px solid #8bdcff}
+@media(max-width:760px){
+  #history-map-banner{left:8px;right:58px;top:58px;padding:7px 8px;gap:7px}
+  #history-map-title{font-size:10px}
+  #history-map-meta{font-size:9.5px}
+  #history-map-back{min-height:36px;font-size:11px;padding:6px 8px}
+  .sun-toggle{font-size:9.5px;padding:5px 8px;min-height:28px}
+}
+
 </style>
 </head>
 <body>
@@ -320,7 +382,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.9 MULTI-MAPA</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.10 HISTORIAL VISUAL</span></div>
   </aside>
 
   <div class="stage">
@@ -337,6 +399,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
       </div>
       <div class="top-actions">
         <span class="pill"><span class="dot"></span><span id="sync-label">Sesión local</span></span>
+        <button type="button" id="sunlight-toggle" class="pill sun-toggle" aria-pressed="false" title="Activar modo de alto contraste para exteriores"><i class="fa-solid fa-sun"></i><span>Modo sol</span></button>
         <button type="button" id="install-map" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i><span id="install-map-label">Instalar todos los mapas</span></button>
       </div>
     </header>
@@ -448,6 +511,10 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
         </div>
 
         <div id="map-detail-status" role="status" aria-live="polite"></div>
+        <div id="history-map-banner" role="status" aria-live="polite" hidden>
+          <div class="history-map-copy"><i class="fa-solid fa-clock-rotate-left"></i><span id="history-map-title">VISTA HISTÓRICA</span><small id="history-map-meta"></small></div>
+          <button type="button" id="history-map-back" class="btn btn-sm"><i class="fa-solid fa-arrow-left"></i>Volver al historial</button>
+        </div>
         <div class="map-top">
           <span id="active-map-chip" class="pill" style="background:rgba(9,18,30,.92);backdrop-filter:blur(10px)">Proyecto 2026</span>
           <button id="map-retry-svg" class="btn btn-sm" type="button"><i class="fa-solid fa-arrows-rotate"></i>Reintentar SVG</button>
@@ -466,7 +533,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
         <div class="legend">
           <span><i class="fa-solid fa-circle" style="color:#34d399"></i>Registrado</span>
           <span><i class="fa-solid fa-circle" style="color:#fbbf24"></i>Disponible</span>
-          <span><i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código del cuartel</span>
+          <span id="map-legend-hint"><i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código del cuartel</span>
         </div>
 
         <div class="map-tools">
@@ -540,6 +607,20 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
+const SUNLIGHT_MODE_KEY='agrovalle_modo_sol_v34_10';
+function applySunlightMode(enabled,persist=true){
+  document.body.classList.toggle('sunlight-mode',!!enabled);
+  const button=$('sunlight-toggle');
+  if(button){
+    button.setAttribute('aria-pressed',String(!!enabled));
+    button.title=enabled?'Desactivar alto contraste':'Activar alto contraste para exteriores';
+    button.innerHTML=enabled?'<i class="fa-solid fa-sun"></i><span>Modo sol activo</span>':'<i class="fa-solid fa-sun"></i><span>Modo sol</span>';
+  }
+  if(persist){try{localStorage.setItem(SUNLIGHT_MODE_KEY,enabled?'1':'0');}catch(e){}}
+}
+let sunlightSaved=false;try{sunlightSaved=localStorage.getItem(SUNLIGHT_MODE_KEY)==='1';}catch(e){}
+applySunlightMode(sunlightSaved,false);
+$('sunlight-toggle').addEventListener('click',()=>applySunlightMode(!document.body.classList.contains('sunlight-mode')));
 const NS = 'http://www.w3.org/2000/svg';
 const STORE_BASE = 'agrovalle_svg_registros_v1';
 const REPORT_STORE_BASE = 'agrovalle_informe_jornada_v1';
@@ -603,7 +684,7 @@ const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits:
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
 const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
-// Esperar a la activación de V34.9 antes de leer metadatos que V34.8 pudo dejar en caché.
+// Esperar a la activación de V34.10 antes de leer metadatos y recursos de interfaz actualizados.
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
@@ -1002,7 +1083,15 @@ function loadJornadas(){
 }
 function saveJornadas(o){try{localStorage.setItem(JORNADAS_STORE_BASE,JSON.stringify(o));return true;}catch(e){return false;}}
 function loadJornadasForMap(mapId){return Object.fromEntries(Object.entries(loadJornadas()).filter(([,j])=>(j?.mapId||'proyecto-2026')===mapId));}
-let historicalPanel = null; // Vista de solo lectura: no mezcla jornadas archivadas con el mapa activo.
+let historicalPanel = null; // Vista de solo lectura del panel de informe.
+let historicalMapView = null; // Vista cartográfica histórica: sólo muestra los cuarteles validados de una jornada.
+function clearHistoricalMapView(){
+  historicalMapView=null;
+  const banner=$('history-map-banner');if(banner)banner.hidden=true;
+  const hint=$('map-legend-hint');if(hint)hint.innerHTML='<i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código del cuartel';
+  markerBounds.clear();markerScreenBounds.clear();
+  if(mapReady&&svg){drawFlags();renderDetectedList();}
+}
 function clearHistoricalPanel(restoreWorkingDate=true) {
   // Al consultar una jornada archivada se muestra su fecha sólo en modo lectura.
   // Cuando se vuelve al trabajo activo, recuperar la selección anterior.
@@ -1304,12 +1393,19 @@ function drawFlags() {
   if (!svg) return;
   markerBounds.clear();
   let painted=0;
-  for (const [id,r] of Object.entries(data.registros)) {
+  const rows=historicalMapView
+    ?historicalMapView.rows.map(r=>[r.cuartelId,r])
+    :Object.entries(data.registros);
+  for (const [key,r] of rows) {
+    const id=r?.cuartelId||key;
+    if(!id||!r)continue;
+    if(historicalMapView&&(r.mapId!==activeMapId||!historicalMapView.ids.has(id)))continue;
+    const checked={...r,cuartelId:id,mapId:r.mapId||activeMapId};
     // Nunca mostrar como completado un cuartel con superficie discrepante.
     // Tampoco ubicar por nombre un registro antiguo con código duplicado.
-    if (auditRows([r]).length) continue;
+    if (auditRows([checked]).length) continue;
     const src=sourceCatalogById.get(id);
-    if(!src||sourceForRow(r)?.id!==id)continue;
+    if(!src||sourceForRow(checked)?.id!==id)continue;
     const c=data.contornos[id];
     const pos=markerPosition(c);if(!pos)continue;
     markerBounds.set(id,pos);painted++;
@@ -1336,6 +1432,7 @@ function pointInSvg(x,y) {
   return m ? {x:(x-m.left)/m.scale,y:(y-m.top)/m.scale} : null;
 }
 function selectAt(x,y) {
+  if(historicalMapView){status.textContent='Vista histórica de solo lectura. Vuelve al historial para salir de esta consulta.';return;}
   if(!svg||$('agro-modal').classList.contains('show')||!sourceCatalogReady)return;
   const p=pointInSvg(x,y),m=mapMetrics();if(!p||!m)return;
   if(p.x<0||p.y<0||p.x>m.width||p.y>m.height)return;
@@ -1396,7 +1493,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-9-multi-map';
+  const SHELL_VERSION='agrovalle-shell-v34-10-history-visual';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1700,7 +1797,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   const mapUrlsForConfig=(cfg,manifest)=>[cfg.manifest,...manifest.files];
   async function hasOfflineShell(){
     try{const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;const shell=await caches.open(SHELL_VERSION);
-      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png'];
+      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico'];
       return !!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
     }catch(e){return false;}
   }
@@ -1867,7 +1964,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
         const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration().catch(()=>null):null;
         const shell=await caches.open(SHELL_VERSION);
         const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css',
-          './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png'];
+          './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico'];
         const hasShell=!!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
         if(!hasShell)throw Error('Los mapas están guardados, pero faltan recursos esenciales de la aplicación offline. Reabre con internet para verificar el Service Worker.');
         installLabel.textContent='Todos los mapas instalados ✓';mapInstallMessage('');
@@ -1934,16 +2031,20 @@ $('btn-zoom-reset').onclick = reset;
 /* ---------- drawer cuarteles ---------- */
 function renderDetectedList() {
   const host = $('detected-list'); host.replaceChildren();
-  const done = new Set(Object.keys(data.registros));
+  const historicalIds=historicalMapView?historicalMapView.ids:null;
+  const done = historicalIds||new Set(Object.keys(data.registros));
   if (!detected.length) {
     const p = document.createElement('p'); p.className = 'av-muted'; p.style.padding = '10px';
     p.textContent = 'Sin cuarteles detectados.'; host.append(p); return;
   }
   const query=normalizeCuartel($('detected-search')?.value||'');
-  let entries=detected;
+  let entries=historicalMapView?detected.filter(d=>historicalIds.has(d.id)):detected;
   if(query){const exact=entries.filter(d=>normalizeCuartel(d.text)===query);
     entries=exact.length?exact:entries.filter(d=>normalizeCuartel(d.text).includes(query));}
-  // Dos P-59 aparecen en la búsqueda con las dos superficies originales.
+  if(historicalMapView&&!entries.length){
+    const p=document.createElement('p');p.className='av-muted';p.style.padding='10px';
+    p.textContent='Esta jornada no tiene cuarteles coincidentes con la búsqueda.';host.append(p);return;
+  }
   for (const d of entries.slice(0, 250)) {
     const b = document.createElement('button');
     b.className = 'det-item' + (done.has(d.id) ? ' done' : '');
@@ -1952,7 +2053,10 @@ function renderDetectedList() {
     const h = document.createElement('span'); h.textContent = valid
       ?(valid.estado==='ASOCIACION_POR_UBICACION'?'✓ UBICACIÓN VALIDADA · ':'')+areaBreakdownForSource(valid)
       :'⚠ PENDIENTE DE VALIDACIÓN · REGISTRO BLOQUEADO';
-    b.append(n, h); b.onclick = () => openModal(d.id); host.append(b);
+    b.append(n, h);
+    if(historicalMapView){b.disabled=true;b.title='Consulta histórica de solo lectura';}
+    else b.onclick = () => openModal(d.id);
+    host.append(b);
   }
 }
 $('btn-detected').onclick = () => {renderDetectedList();$('detected-panel').classList.toggle('open');};
@@ -2007,7 +2111,7 @@ $('btn-data-backup').onclick=()=>{
     const key=localStorage.key(i);
     if(prefixes.some(base=>key===base||key.startsWith(base+'__')))stores[key]=localStorage.getItem(key);
   }
-  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_multi_mapa_v34_9',version:'v34.9-multi-map',
+  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_multi_mapa_v34_10',version:'v34.10-history-visual',
     mapaActivo:activeMapId,mapaActivoNombre:mapConfig.name,stores};
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download='GESTION_AGRICOLA_respaldo_'+localDay()+'.json';a.click();
@@ -2126,6 +2230,7 @@ async function switchActiveMap(nextId,options={}){
   if(!next){toast('Mapa no disponible en el catálogo','err');updateMapSelectorUI();return false;}
   if(next.id===activeMapId){updateMapSelectorUI();return true;}
   const oldName=mapConfig.name;
+  if(!options.keepHistoricalMapView)clearHistoricalMapView();
   const hasWork=Object.keys(data.registros).length>0||Object.keys(loadJornadasForMap(activeMapId)).length>0;
   const message=hasWork
     ?'Cambiar de '+oldName+' a '+next.name+'?\n\nLos registros y jornadas de '+oldName+' quedarán guardados en su propio espacio. Se abrirán los datos independientes de '+next.name+'. No se mezclarán superficies ni cuarteles.'
@@ -2136,7 +2241,7 @@ async function switchActiveMap(nextId,options={}){
   if($('agro-modal').classList.contains('show'))closeModal();
   clearHistoricalPanel(false);
   activeMapId=next.id;mapConfig=next;
-  try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}
+  if(!options.fromHistory){try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}}
   setStorageKeys(activeMapId);data=readStoredMapData();
   sourceCatalogGeneration++;sourceCatalogLoading=null;sourceCatalogReady=false;
   sourceCatalogById=new Map();sourceCatalogByName=new Map();sourceLabels=[];sourceCatalogError='';
@@ -2427,6 +2532,90 @@ async function auditRowsForMap(rows,mapId,snapshot=null){
   return problems;
 }
 
+function focusHistoricalRows(rows){
+  if(!mapReady||!svg||!rows.length)return;
+  reset();
+  requestAnimationFrame(()=>{
+    const m=mapMetrics(),rect=viewport.getBoundingClientRect();
+    if(!m||!rect.width||!rect.height)return;
+    const pts=rows.map(r=>sourceCatalogById.get(r.cuartelId)).filter(s=>s&&Number.isFinite(+s.x)&&Number.isFinite(+s.y));
+    if(!pts.length)return;
+    const bounds=pts.reduce((b,p)=>({minX:Math.min(b.minX,Number(p.x)),maxX:Math.max(b.maxX,Number(p.x)),
+      minY:Math.min(b.minY,Number(p.y)),maxY:Math.max(b.maxY,Number(p.y))}),
+      {minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity});
+    const {minX,maxX,minY,maxY}=bounds;
+    const spanX=Math.max(90,maxX-minX+100),spanY=Math.max(90,maxY-minY+100);
+    const fitX=(rect.width*.76)/(spanX*m.scale),fitY=(rect.height*.66)/(spanY*m.scale);
+    zoom=Math.max(.7,Math.min(8,fitX,fitY));
+    panX=0;panY=0;scheduleTransform();
+    requestAnimationFrame(()=>{
+      const z=mapMetrics();if(!z)return;
+      const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+      const screenX=z.left+cx*z.scale,screenY=z.top+cy*z.scale;
+      panX+=rect.left+rect.width/2-screenX;
+      panY+=rect.top+rect.height/2-screenY;
+      scheduleTransform();
+    });
+  });
+}
+
+async function showHistoryOnMap({date,entry,mapId,rows,snapshot}){
+  if(date==='Sin fecha'){toast('Los registros sin fecha no pueden abrirse como jornada cartográfica.','warn');return;}
+  const returnMapId=activeMapId;
+  if(!await switchActiveMap(mapId,{fromHistory:true,keepHistoricalMapView:true}))return;
+  try{
+    await loadSourceCatalog();
+    const catalogSnapshot=snapshot||await loadHistoryCatalogSnapshot(mapId);
+    const validated=[],blocked=[];
+    for(const row of rows){
+      const issues=await auditRowsForMap([row],mapId,catalogSnapshot);
+      const src=historySourceForRow(row,catalogSnapshot,mapId);
+      if(issues.length||!src){blocked.push({row,issues});continue;}
+      validated.push({...row,cuartelId:src.id,mapId,mapName:row.mapName||entry.mapName||mapNameForId(mapId)});
+    }
+    if(!validated.length){
+      if(returnMapId!==activeMapId)await switchActiveMap(returnMapId,{fromHistory:true});
+      toast('No hay cuarteles con ID geográfico y hectáreas validados para mostrar. No se dibujaron marcadores.','err');
+      return;
+    }
+    const view={mapId,date,rows:validated,ids:new Set(validated.map(r=>r.cuartelId)),
+      mapName:entry.mapName||entry.jornada?.mapName||mapNameForId(mapId),
+      total:validated.reduce((n,r)=>n+(Number(r.ha)||0),0),blockedCount:blocked.length,
+      returnMapId,key:entry.key};
+    historicalMapView=view;
+    $('history-map-title').textContent='VISTA HISTÓRICA · '+view.mapName;
+    $('history-map-meta').textContent=date.split('-').reverse().join('-')+' · '+validated.length+' cuarteles · '+fmt(view.total)+' ha'+(blocked.length?' · '+blocked.length+' bloqueados':'');
+    $('history-map-banner').hidden=false;
+    $('map-legend-hint').innerHTML='<i class="fa-solid fa-lock" style="color:#22d3ee"></i>Consulta histórica · solo lectura';
+    $('detected-search').value='';
+    switchTab('mapa');
+    if(mapReady){drawFlags();renderDetectedList();focusHistoricalRows(validated);}
+    else{
+      const waitUntilReady=async()=>{
+        for(let i=0;i<150;i++){
+          if(historicalMapView!==view)return;
+          if(mapReady&&svg){drawFlags();renderDetectedList();focusHistoricalRows(validated);return;}
+          await new Promise(resolve=>setTimeout(resolve,100));
+        }
+        if(historicalMapView===view)toast('El mapa sigue cargando. Los registros no se modificaron.','warn');
+      };
+      waitUntilReady();
+    }
+    if(blocked.length)toast('Vista histórica parcial: '+validated.length+' cuarteles validados; '+blocked.length+' no se muestran por seguridad.','warn');
+    else toast('Mapa histórico listo: '+validated.length+' cuarteles trabajados.','ok');
+  }catch(err){
+    clearHistoricalMapView();
+    if(returnMapId!==activeMapId)await switchActiveMap(returnMapId,{fromHistory:true});
+    toast('No se pudo mostrar el mapa histórico: '+(err.message||err),'err');
+  }
+}
+async function leaveHistoryMapView(){
+  const previous=historicalMapView?.returnMapId||'proyecto-2026';
+  clearHistoricalMapView();
+  if(previous!==activeMapId)await switchActiveMap(previous,{fromHistory:true});
+  switchTab('historial');
+}
+
 function archivedSpecialRowsCanBeRectified(rows) {
   const invalid=rows.filter(r=>auditRows([r]).length);
   return invalid.length>0&&invalid.every(r=>{
@@ -2573,23 +2762,10 @@ async function renderHistory(){
     share.onclick=async()=>{try{const text=await historyExtract(date,rows,j,mapId,snapshot);await shareHistoryExtract(text);}catch(err){toast(err.message,'err');alert(err.message);}};actions.append(share);
 
     if(date!=='Sin fecha'){
-      const open=document.createElement('button');open.className='btn btn-sm btn-primary';open.innerHTML='<i class="fa-solid fa-pen-to-square"></i>Abrir en panel';
-      open.onclick=async()=>{
-        try{
-          if(!await switchActiveMap(mapId,{fromHistory:true}))return;
-          await loadSourceCatalog();
-          rep('date').value=date;
-          if(j){for(const id of ['company','contractor','supervisor','sector','farm'])if(j[id]!=null)rep(id).value=j[id];
-            if(j.people!=null)rep('people').value=j.people;
-            if(j.mixture!=null){const match=Object.entries(mixtures).find(([,text])=>text===j.mixture);rep('mixture').value=match?match[0]:'other';rep('custom').value=match?'':j.mixture;toggleCustom();}}
-          historicalPanel={rows:rows.map(r=>({name:r.name,cuartelId:r.cuartelId||null,mapId:r.mapId||mapId,mapName:r.mapName||j?.mapName||mapNameForId(mapId),
-            catalogo:r.catalogo||j?.catalogo||mapConfig.catalogVersion,origenSHA256:r.origenSHA256||j?.origenSHA256||mapConfig.sourceSvgHash,ha:Number(r.ha)||0,
-            areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
-            correcciones:Array.isArray(r.correcciones)?r.correcciones:[]})),key:entry.key};
-          persistReport();renderReportRows();switchTab('panel');
-          toast('Jornada de '+mapNameForId(mapId)+' abierta con '+rows.length+' cuarteles y '+fmt(sum)+' ha.','ok');
-        }catch(err){toast('No se pudo abrir la jornada: '+(err.message||err),'err');}
-      };actions.append(open);
+      const viewMap=document.createElement('button');viewMap.type='button';viewMap.className='btn btn-sm btn-primary';
+      viewMap.innerHTML='<i class="fa-solid fa-map-location-dot"></i>Ver mapa';
+      viewMap.onclick=()=>showHistoryOnMap({date,entry,mapId,rows,snapshot}).catch(err=>toast('No se pudo abrir el mapa: '+(err.message||err),'err'));
+      actions.append(viewMap);
     }
 
     const del=document.createElement('button');del.className='btn btn-sm btn-danger';del.innerHTML='<i class="fa-solid fa-trash-can"></i>Borrar';
@@ -2649,6 +2825,10 @@ $('hist-export').onclick=async()=>{
 /* ---------- navegación ---------- */
 function switchTab(name) {
   if (document.body.classList.contains('agro-fullscreen')) return;
+  if(historicalMapView&&name!=='mapa'){
+    toast('Estás viendo una jornada histórica en modo de solo lectura. Usa «Volver al historial» para salir.','warn');
+    return;
+  }
   $('av-main').hidden = name !== 'mapa';
   $('av-report').hidden = name !== 'panel';
   $('av-history').hidden = name !== 'historial';
@@ -2668,6 +2848,7 @@ function switchTab(name) {
   if (name === 'panel') { renderReportRows(); refreshKPIs(); }
 }
 document.querySelectorAll('[data-av-tab]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.avTab)));
+$('history-map-back').addEventListener('click',()=>leaveHistoryMapView());
 $('av-go-map').addEventListener('click', () => {
   if (!validWorkDate(selectedWorkDate)) { rep('message').textContent = 'Selecciona una fecha de trabajo válida.'; toast('Fecha de jornada inválida', 'warn'); return; }
   clearHistoricalPanel(); renderReportRows(); persistReport(); switchTab('mapa');

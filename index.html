@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.5 iPhone / P-59</title>
+<title>GESTION AGRICOLA · V34.8 Multi-mapa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#04080f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -320,7 +320,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.6 SVG</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.8 MAPAS</span></div>
   </aside>
 
   <div class="stage">
@@ -361,6 +361,10 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
         <div class="card-body">
           <p class="av-muted" style="margin:0 0 12px">Completa la información antes de registrar los cuarteles. Los cambios se guardan automáticamente en este dispositivo.</p>
           <div class="form-grid">
+            <div class="f col-2"><label for="map-selector">Mapa de trabajo para esta jornada</label>
+              <select id="map-selector" class="av-input" disabled><option value="proyecto-2026">Cargando mapas disponibles…</option></select>
+              <small id="map-selector-note" class="av-muted">Cada mapa conserva sus propios registros, cuarteles e historial. Instala cada mapa una vez para usarlo sin conexión.</small>
+            </div>
             <div class="f col-2"><label for="rep-company">Empresa</label><input id="rep-company" class="av-input" value="AGRO VALLE ESCONDIDO SPA"></div>
             <div class="f col-2"><label for="rep-contractor">Contratista</label><input id="rep-contractor" class="av-input" value="PABLO CORNEJO"></div>
             <div class="f col-2"><label for="rep-supervisor">Supervisor</label><input id="rep-supervisor" class="av-input" value="Juan Pablo"></div>
@@ -445,6 +449,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 
         <div id="map-detail-status" role="status" aria-live="polite"></div>
         <div class="map-top">
+          <span id="active-map-chip" class="pill" style="background:rgba(9,18,30,.92);backdrop-filter:blur(10px)">Proyecto 2026</span>
           <button id="map-retry-svg" class="btn btn-sm" type="button"><i class="fa-solid fa-arrows-rotate"></i>Reintentar SVG</button>
           <button id="btn-detected" class="btn btn-sm"><i class="fa-solid fa-list-ul"></i>Cuarteles</button>
           <button id="btn-fullscreen" class="btn btn-sm" aria-label="Pantalla completa"><i class="fa-solid fa-expand"></i><span id="fs-label">Pantalla completa</span></button>
@@ -536,10 +541,27 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 'use strict';
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
-const STORE = 'agrovalle_svg_registros_v1';
-const REPORT_STORE = 'agrovalle_informe_jornada_v1';
-const WORK_DATE_STORE = 'gestion_agricola_fecha_manual_v34_6';
-const JORNADAS_STORE = 'agrovalle_jornadas_v1';
+const STORE_BASE = 'agrovalle_svg_registros_v1';
+const REPORT_STORE_BASE = 'agrovalle_informe_jornada_v1';
+const WORK_DATE_STORE_BASE = 'gestion_agricola_fecha_manual_v34_6';
+const JORNADAS_STORE_BASE = 'agrovalle_jornadas_v1';
+const ACTIVE_MAP_STORE = 'agrovalle_mapa_activo_v34_8';
+let activeMapId='proyecto-2026';
+try{activeMapId=localStorage.getItem(ACTIVE_MAP_STORE)||'proyecto-2026';}catch(e){}
+let STORE=STORE_BASE,REPORT_STORE=REPORT_STORE_BASE,WORK_DATE_STORE=WORK_DATE_STORE_BASE,JORNADAS_STORE=JORNADAS_STORE_BASE;
+function setStorageKeys(mapId){
+  const suffix=mapId==='proyecto-2026'?'':'__'+mapId;
+  STORE=STORE_BASE+suffix;REPORT_STORE=REPORT_STORE_BASE+suffix;
+  WORK_DATE_STORE=WORK_DATE_STORE_BASE+suffix;JORNADAS_STORE=JORNADAS_STORE_BASE+suffix;
+}
+setStorageKeys(activeMapId);
+function readStoredMapData(){
+  const empty={contornos:{},registros:{},poligonos:{}};
+  try{const saved=JSON.parse(localStorage.getItem(STORE));
+    if(saved?.registros&&saved?.contornos)return {...empty,...saved};
+  }catch(e){}
+  return empty;
+}
 const viewport = $('map-viewport'), container = $('svg-container'), status = $('info-status');
 
 /* ---------- toasts ---------- */
@@ -557,11 +579,7 @@ function toast(msg, kind) {
   }, 2600);
 }
 
-let data = { contornos: {}, registros: {}, poligonos: {} };
-try {
-  const saved = JSON.parse(localStorage.getItem(STORE));
-  if (saved?.registros && saved?.contornos) data = { ...data, ...saved };
-} catch (e) {}
+let data = readStoredMapData();
 
 let svg = null, detected = [], modalId = null, zoom = 1, panX = 0, panY = 0;
 let pointers = new Map(), gesture = null, suppressClick = false, frame = 0;
@@ -569,12 +587,46 @@ let fullHistory = false, modalHistory = false;
 const historyTag = 'agroValleNavigationV32';
 const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
-/* V34.5: catálogo de superficies derivado del SVG original, con huella fija.
-   Un catálogo ausente, alterado o con nombres duplicados NO habilita registros. */
-const SOURCE_CATALOG_URL='map-svg/cuarteles-fuente-v34-5.json';
-const SOURCE_CATALOG_HASH='1caa8f50df18d29262145fa7e39bfe66f69f9d2abd4330d591a4bb469918b943';
-const SOURCE_SVG_HASH='206807d5d85a4d2e358dea3cb7635cbf37b5ffba9a35636f8d390fe00d052c75';
-let sourceCatalogReady=false, sourceCatalogLoading=null, sourceCatalogById=new Map(), sourceCatalogByName=new Map(), sourceCatalogError='';
+const MAP_REGISTRY_URL='maps/catalog.json';
+const MAP_REGISTRY_HASH='936bfceb9a9c192d8e61dd395ec6b06e53a6d30acc4d4e4fd3653064186bd9a0';
+const BASE_MAP_CONFIG={id:'proyecto-2026',name:'Proyecto 2026',manifest:'map-svg/manifest-v34-5.json',manifestHash:'f148238c3cc07529de1c923bf5a82af5e10a85ffd9c69a03032df93b231de1fb',
+  catalog:'map-svg/cuarteles-fuente-v34-5.json',labels:'map-svg/labels.json',extras:'map-svg/extras.json',
+  overview:'map-svg/vista-general-satelital.jpg',overviewVectors:'map-svg/resumen-vectores-original.svg',
+  vectorDir:'map-svg/vectores/',photoDir:'map-svg/foto/',
+  sourceSvgHash:'206807d5d85a4d2e358dea3cb7635cbf37b5ffba9a35636f8d390fe00d052c75',
+  catalogHash:'1caa8f50df18d29262145fa7e39bfe66f69f9d2abd4330d591a4bb469918b943',
+  labelsHash:'8f256f9994b830ce4f1b2949fb4de93fa4ff79ecb54f5bb8c61a5ddf3066ba4b',
+  catalogVersion:'v34-5-ubicaciones-svg-2026',manifestVersion:'v34-5-ubicaciones-svg-2026',
+  cuartelCount:738,validCount:738,blockedCount:0,labelsCount:1325,overviewMode:'separate'};
+let mapRegistry=[BASE_MAP_CONFIG],mapConfig=BASE_MAP_CONFIG,mapRegistryLoading=null,mapRegistryReady=false,mapRegistryError='';
+const AREA_RULE_VERSION='v34-7-superficies-compuestas';
+/* Reglas de agrupación solicitadas para cinco cuarteles con más de una
+   etiqueta de superficie en el SVG original. No se altera el SVG.
+   Cada componente se valida por índice, texto y coordenadas de labels.json. */
+const SPECIAL_AREA_GROUPS=Object.freeze({
+  'auto_P-591':{nombre:'P-591',total:0.30,parts:[
+    {ha:0.19,labelIndex:135,text:'0.19 ha.',x:4428.08,y:1484.8},
+    {ha:0.11,labelIndex:136,text:'0.11 ha.',x:4437.8,y:1527.52}
+  ]},
+  'auto_P-582':{nombre:'P-582',total:0.35,parts:[
+    {ha:0.28,labelIndex:130,text:'0.28 ha.',x:4289.12,y:1404.28},
+    {ha:0.07,labelIndex:349,text:'0.07 ha.',x:4332.68,y:1381.36}
+  ]},
+  'auto_P-581':{nombre:'P-581',total:0.80,parts:[
+    {ha:0.64,labelIndex:129,text:'0.64 ha.',x:4241.24,y:1352.8},
+    {ha:0.16,labelIndex:126,text:'0.16 ha.',x:4306.16,y:1291.0}
+  ]},
+  'auto_P-579':{nombre:'P-579',total:0.21,parts:[
+    {ha:0.11,labelIndex:131,text:'0.11 ha.',x:4255.88,y:1197.28},
+    {ha:0.10,labelIndex:127,text:'0.10 ha.',x:4288.52,y:1193.56}
+  ]},
+  'auto_P-626':{nombre:'P-626',total:0.58,parts:[
+    {ha:0.31,labelIndex:571,text:'0.31 ha.',x:3996.08,y:937.96},
+    {ha:0.27,labelIndex:1324,text:'0.27 ha.',x:4055.84,y:887.32}
+  ]}
+});
+
+let sourceCatalogReady=false, sourceCatalogLoading=null, sourceCatalogGeneration=0, sourceCatalogById=new Map(), sourceCatalogByName=new Map(), sourceCatalogError='',sourceLabels=[];
 const normalizeCuartel = s => String(s||'').trim().replace(/\s+/g,'').toUpperCase();
 // Solo los códigos de nombre único permiten resolver registros legados por nombre.
 // Para P-59 se exige SIEMPRE ID espacial: la superficie sola no identifica la ubicación.
@@ -588,27 +640,124 @@ function validSourceById(id, name) {
   return src.estado==='ASOCIACION_UNICA'||src.estado==='ASOCIACION_POR_UBICACION'?src:null;
 }
 function sourceForRow(row) {
+  if(row?.mapId&&row.mapId!==activeMapId)return null;
+  if(!row?.mapId&&activeMapId!=='proyecto-2026')return null; // Los registros legados pertenecen sólo a Proyecto 2026.
   if(row?.cuartelId){return validSourceById(row.cuartelId,row.name);}
   return originalFor(row?.name); // Sólo para registros históricos no ambiguos.
 }
 function displayCuartel(row) {
   const src=sourceForRow(row);
-  return src?.estado==='ASOCIACION_POR_UBICACION'?src.identificacion:(row?.name||'Cuartel');
+  return src?.identificacion||(row?.name||'Cuartel');
+}
+
+function areaRuleForSource(src) {
+  return src ? SPECIAL_AREA_GROUPS[src.id] || null : null;
+}
+function expectedHectares(src) {
+  const rule=areaRuleForSource(src);
+  if(!rule)return Number(src?.hectareas);
+  const sum=rule.parts.reduce((n,p)=>n+Number(p.ha),0);
+  return Math.round((sum+Number.EPSILON)*100)/100;
+}
+function areaComponentsSnapshot(src) {
+  const rule=areaRuleForSource(src);
+  return rule ? rule.parts.map(p=>({ha:p.ha,labelIndex:p.labelIndex,text:p.text})) : null;
+}
+function areaBreakdownForSource(src) {
+  const rule=areaRuleForSource(src);
+  if(!rule)return fmt(src?.hectareas)+' ha';
+  return rule.parts.map(p=>fmt(p.ha)+' ha').join(' + ')+' = '+fmt(expectedHectares(src))+' ha';
+}
+function areaBreakdownForRow(row) {
+  const src=sourceForRow(row);
+  return src ? areaBreakdownForSource(src) : fmt(row?.ha)+' ha';
+}
+function splitComponentsMatch(row, src) {
+  const rule=areaRuleForSource(src);
+  if(!rule)return true;
+  if(row?.areaRuleVersion!==AREA_RULE_VERSION||!Array.isArray(row?.areaComponents)||row.areaComponents.length!==rule.parts.length)return false;
+  return rule.parts.every((p,i)=>{
+    const saved=row.areaComponents[i];
+    return saved && Math.round(Number(saved.ha)*100)===Math.round(p.ha*100) &&
+      Number(saved.labelIndex)===p.labelIndex && String(saved.text||'')===p.text;
+  });
+}
+async function verifySpecialAreaLabels(byId) {
+  const response=await fetch(mapConfig.labels);
+  if(!response.ok)throw Error('Etiquetas originales del plano no disponibles (HTTP '+response.status+').');
+  const buffer=await response.arrayBuffer();
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(hash!==mapConfig.labelsHash)throw Error('Las etiquetas del SVG no coinciden con la fuente verificada. Registro bloqueado.');
+  const labels=JSON.parse(new TextDecoder().decode(buffer));
+  if(!Array.isArray(labels)||labels.length!==mapConfig.labelsCount)throw Error('Catálogo de etiquetas incompleto.');
+  for(const [id,rule] of Object.entries(SPECIAL_AREA_GROUPS)){
+    const src=byId.get(id);
+    if(!src||src.nombre!==rule.nombre||Math.round(Number(src.hectareas)*100)!==Math.round(rule.parts[0].ha*100))
+      throw Error('La superficie base de '+rule.nombre+' no coincide con el catálogo oficial.');
+    const total=Math.round(rule.parts.reduce((n,p)=>n+p.ha,0)*100)/100;
+    if(Math.round(total*100)!==Math.round(rule.total*100))throw Error('Suma de componentes inválida para '+rule.nombre+'.');
+    for(const part of rule.parts){
+      const label=labels[part.labelIndex];
+      if(!label||String(label.text||'').trim()!==part.text||
+        Math.abs(Number(label.x)-part.x)>0.001||Math.abs(Number(label.y)-part.y)>0.001)
+        throw Error('No se pudo verificar la etiqueta '+part.text+' de '+rule.nombre+'.');
+    }
+  }
+  return labels;
+}
+async function verifyNewMapLabels(catalog){
+  const response=await fetch(mapConfig.labels);
+  if(!response.ok)throw Error('Etiquetas del mapa no disponibles (HTTP '+response.status+').');
+  const buffer=await response.arrayBuffer();
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(hash!==mapConfig.labelsHash)throw Error('Las etiquetas del mapa no coinciden con su huella SHA-256. Registro bloqueado.');
+  const labels=JSON.parse(new TextDecoder().decode(buffer));
+  if(!Array.isArray(labels)||labels.length!==mapConfig.labelsCount)throw Error('Cantidad de etiquetas distinta al manifiesto del mapa.');
+  for(const item of catalog.cuarteles){
+    const nameLabel=labels[item.fuenteNombreIndice],areaLabel=labels[item.fuenteSuperficieIndice];
+    if(!nameLabel||!areaLabel||String(nameLabel.text||'').trim()!==item.nombre||
+      String(areaLabel.text||'').trim()!==item.etiquetaSuperficie||
+      Math.abs(Number(nameLabel.x)-Number(item.x))>0.001||Math.abs(Number(nameLabel.y)-Number(item.y))>0.001)
+      throw Error('No coincide la ubicación original de '+item.nombre+'. Registro bloqueado.');
+    const m=String(areaLabel.text||'').match(/(\d+(?:[.,]\d+)?)\s*ha/i);
+    const area=m?Number(m[1].replace(',','.')):NaN;
+    if(!Number.isFinite(area)||Math.round(area*100)!==Math.round(Number(item.hectareas)*100))
+      throw Error('La superficie original de '+item.nombre+' no coincide con su catálogo.');
+    const valid=item.estado==='ASOCIACION_UNICA'||item.estado==='ASOCIACION_POR_UBICACION';
+    if(valid&&(!item.asociacionMutua||Number(item.distanciaEtiquetas)>15||Number(item.ratioSegundaOpcion)<1.25))
+      throw Error('Asociación espacial no supera los criterios de seguridad para '+item.nombre+'.');
+  }
+  return labels;
 }
 function auditRows(rows) {
   const problems=[];
   if(!sourceCatalogReady)return [{name:'CATÁLOGO',reason:'No se ha verificado el catálogo cartográfico.'}];
   for(const row of rows){
+    if(row?.mapId&&row.mapId!==activeMapId){
+      problems.push({name:row?.name||'Sin nombre',reason:'El registro pertenece al mapa '+(row.mapName||row.mapId)+' y no a '+mapConfig.name+'.'});continue;
+    }
+    if(!row?.mapId&&activeMapId!=='proyecto-2026'){
+      problems.push({name:row?.name||'Sin nombre',reason:'Registro histórico sin mapId: sólo puede auditarse en Proyecto 2026.'});continue;
+    }
+    const rawSource=row?.cuartelId?sourceCatalogById.get(row.cuartelId):null;
     const src=sourceForRow(row);
     if(!src){
-      problems.push({name:row?.name||'Sin nombre',reason:normalizeCuartel(row?.name)==='P-59'
-        ?'P-59 requiere su identificador de ubicación original (0,17 o 0,34 ha); un registro antiguo sin ubicación queda bloqueado.'
-        :'Identificador o código inexistente, alterado o ambiguo en el plano.'});
+      const reason=rawSource?.estado==='PENDIENTE_VALIDACION'
+        ?'La asociación entre código y hectáreas no superó la validación espacial. Registro bloqueado hasta revisión del plano.'
+        :normalizeCuartel(row?.name)==='P-59'
+          ?'P-59 requiere su identificador de ubicación original (0,17 o 0,34 ha); un registro antiguo sin ubicación queda bloqueado.'
+          :'Identificador o código inexistente, alterado o ambiguo en el plano.';
+      problems.push({name:row?.name||'Sin nombre',reason});
       continue;
     }
-    const ha=Number(row?.ha);
-    if(!Number.isFinite(ha)||Math.round(ha*100)!==Math.round(src.hectareas*100))
-      problems.push({name:displayCuartel(row),reason:'Registro '+(Number.isFinite(ha)?fmt(ha):'sin valor')+' ha; SVG original '+fmt(src.hectareas)+' ha.'});
+    const ha=Number(row?.ha),expected=expectedHectares(src),rule=areaRuleForSource(src),reasons=[];
+    if(row?.catalogo&&row.catalogo!==mapConfig.catalogVersion)reasons.push('Versión de catálogo distinta a la del mapa activo.');
+    if(row?.origenSHA256&&row.origenSHA256!==mapConfig.sourceSvgHash)reasons.push('Huella de SVG distinta a la fuente cartográfica activa.');
+    if(!Number.isFinite(ha)||Math.round(ha*100)!==Math.round(expected*100))
+      reasons.push('Registro '+(Number.isFinite(ha)?fmt(ha):'sin valor')+' ha; superficie oficial '+areaBreakdownForSource(src)+'.');
+    if(rule&&!splitComponentsMatch(row,src))
+      reasons.push('Falta o no coincide el desglose verificado de componentes del SVG.');
+    if(reasons.length)problems.push({name:displayCuartel(row),reason:reasons.join(' ')});
   }
   return problems;
 }
@@ -630,37 +779,116 @@ function updateAuditNotice() {
   if(all.length){notice.hidden=false;notice.textContent='⚠ AUDITORÍA OBLIGATORIA: '+all.length+' registro(s) activo(s) o archivado(s) sin concordancia con el SVG. No se modificarán automáticamente. Revisa el respaldo y corrige antes de compartir informes. '+all.slice(0,3).map(p=>p.name+': '+p.reason).join(' | ');}
   else{notice.hidden=true;notice.textContent='';}
 }
+function updateMapSelectorUI(){
+  const selector=$('map-selector');
+  if(selector){
+    selector.replaceChildren();
+    for(const config of mapRegistry){
+      const option=document.createElement('option');option.value=config.id;option.textContent=config.name;selector.append(option);
+    }
+    selector.value=activeMapId;
+    selector.disabled=mapRegistry.length<=1;
+  }
+  const note=$('map-selector-note');
+  if(note){
+    const valid=Number(mapConfig?.validCount)||0,blocked=Number(mapConfig?.blockedCount)||0;
+    note.textContent='Mapa activo: '+(mapConfig?.name||'Proyecto 2026')+' · '+valid+' cuarteles habilitados · '+blocked+' bloqueados por revisión. Cada mapa conserva sus propios registros e historial.';
+    if(mapRegistryError)note.textContent+=' Catálogo de mapas: '+mapRegistryError+' Se mantiene Proyecto 2026.';
+  }
+  const chip=$('active-map-chip');if(chip)chip.textContent=mapConfig?.name||'Proyecto 2026';
+}
+async function loadMapRegistry(){
+  if(mapRegistryReady)return true;
+  if(mapRegistryLoading)return mapRegistryLoading;
+  mapRegistryLoading=(async()=>{
+    const response=await fetch(MAP_REGISTRY_URL);
+    if(!response.ok)throw Error('Catálogo de mapas no disponible (HTTP '+response.status+').');
+    const registryBuffer=await response.arrayBuffer();
+    const registryHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',registryBuffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+    if(registryHash!==MAP_REGISTRY_HASH)throw Error('El catálogo multi-mapa no coincide con su huella verificada.');
+    const registry=JSON.parse(new TextDecoder().decode(registryBuffer));
+    if(registry?.version!=='v34.8-multi-map'||!Array.isArray(registry.maps)||!registry.maps.length)
+      throw Error('Formato del catálogo multi-mapa incorrecto.');
+    const ids=new Set();
+    for(const config of registry.maps){
+      if(!config?.id||ids.has(config.id)||!config.name||!config.manifest||!config.catalog||
+        !config.labels||!config.overview||!config.vectorDir||!config.photoDir||
+        !/^[a-f0-9]{64}$/i.test(config.manifestHash||'')||
+        !/^[a-f0-9]{64}$/i.test(config.sourceSvgHash||'')||
+        !/^[a-f0-9]{64}$/i.test(config.catalogHash||'')||
+        !/^[a-f0-9]{64}$/i.test(config.labelsHash||''))
+        throw Error('Entrada incompleta o duplicada en el catálogo de mapas.');
+      ids.add(config.id);
+    }
+    if(!ids.has('proyecto-2026'))throw Error('Falta el mapa histórico Proyecto 2026.');
+    mapRegistry=registry.maps;
+    let selected=mapRegistry.find(m=>m.id===activeMapId);
+    if(!selected){
+      activeMapId=registry.defaultMapId&&ids.has(registry.defaultMapId)?registry.defaultMapId:'proyecto-2026';
+      try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}
+      setStorageKeys(activeMapId);data=readStoredMapData();selected=mapRegistry.find(m=>m.id===activeMapId);
+    }
+    mapConfig=selected||BASE_MAP_CONFIG;
+    mapRegistryReady=true;mapRegistryError='';updateMapSelectorUI();
+    return true;
+  })().catch(err=>{
+    mapRegistryError=err?.message||String(err);
+    mapRegistry=[BASE_MAP_CONFIG];mapConfig=BASE_MAP_CONFIG;
+    if(activeMapId!=='proyecto-2026'){
+      activeMapId='proyecto-2026';try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}
+      setStorageKeys(activeMapId);data=readStoredMapData();
+    }
+    mapRegistryReady=true;updateMapSelectorUI();return false;
+  }).finally(()=>{mapRegistryLoading=null;});
+  return mapRegistryLoading;
+}
 async function loadSourceCatalog() {
+  await loadMapRegistry();
   if(sourceCatalogReady)return true;
   if(sourceCatalogLoading)return sourceCatalogLoading;
+  const generation=sourceCatalogGeneration,mapId=activeMapId;
   sourceCatalogLoading=(async()=>{
     if(!crypto?.subtle)throw Error('Safari no permite verificar la integridad del catálogo; abre la web desde HTTPS.');
-    const response=await fetch(SOURCE_CATALOG_URL);
+    const response=await fetch(mapConfig.catalog);
     if(!response.ok)throw Error('Catálogo de cuarteles no disponible (HTTP '+response.status+').');
     const buffer=await response.arrayBuffer();
     const sum=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
-    if(sum!==SOURCE_CATALOG_HASH)throw Error('El catálogo no coincide con la versión oficial V34.4. No se permite registrar.');
+    if(sum!==mapConfig.catalogHash)throw Error('El catálogo de '+mapConfig.name+' no coincide con su huella SHA-256. Registro bloqueado.');
     const catalog=JSON.parse(new TextDecoder().decode(buffer));
-    if(catalog.origenSHA256!==SOURCE_SVG_HASH||catalog.version!=='v34-5-ubicaciones-svg-2026'||catalog.cantidadEtiquetas!==738||catalog.cuarteles?.length!==738)throw Error('Catálogo cartográfico incompleto o de otra versión.');
+    if(catalog.origenSHA256!==mapConfig.sourceSvgHash||catalog.version!==mapConfig.catalogVersion||
+      catalog.cantidadEtiquetas!==mapConfig.cuartelCount||catalog.cuarteles?.length!==mapConfig.cuartelCount)
+      throw Error('Catálogo cartográfico incompleto o de otra versión para '+mapConfig.name+'.');
     const byId=new Map(),byName=new Map();
     for(const item of catalog.cuarteles){
-      if(byId.has(item.id)||!Number.isFinite(item.hectareas)||item.hectareas<=0||!Number.isFinite(item.x)||!Number.isFinite(item.y))throw Error('Catálogo corrupto: códigos repetidos o superficies inválidas.');
+      if(!item.id||byId.has(item.id)||!Number.isFinite(item.hectareas)||item.hectareas<=0||
+        !Number.isFinite(item.x)||!Number.isFinite(item.y))
+        throw Error('Catálogo corrupto: códigos repetidos o superficies inválidas en '+mapConfig.name+'.');
       byId.set(item.id,item);
       const key=normalizeCuartel(item.nombre);
       const list=byName.get(key)||[];list.push(item);byName.set(key,list);
     }
-    const duplicate=byName.get('P-59');
-    if(duplicate?.length!==2||duplicate.some(e=>e.estado!=='ASOCIACION_POR_UBICACION'||e.requiereIdUbicacion!==true)||
-      [...duplicate].sort((a,b)=>a.hectareas-b.hectareas).some((e,i)=>
-        Math.round(e.hectareas*100)!==[17,34][i]||e.id!==['auto_P-59__x1901_y3788','auto_P-59__x1868_y3739'][i])||
-      byName.get('P-9')?.[0]?.hectareas!==0.56)throw Error('Comprobación de ubicaciones P-59/P-9 no superada.');
-    sourceCatalogById=byId;sourceCatalogByName=byName;sourceCatalogReady=true;sourceCatalogError='';
-    updateAuditNotice();table();renderReportRows();refreshKPIs();
+    let labels;
+    if(activeMapId==='proyecto-2026'){
+      const duplicate=byName.get('P-59');
+      if(duplicate?.length!==2||duplicate.some(e=>e.estado!=='ASOCIACION_POR_UBICACION'||e.requiereIdUbicacion!==true)||
+        [...duplicate].sort((a,b)=>a.hectareas-b.hectareas).some((e,i)=>
+          Math.round(e.hectareas*100)!==[17,34][i]||e.id!==['auto_P-59__x1901_y3788','auto_P-59__x1868_y3739'][i])||
+        byName.get('P-9')?.[0]?.hectareas!==0.56)throw Error('Comprobación de ubicaciones P-59/P-9 no superada.');
+      labels=await verifySpecialAreaLabels(byId);
+    }else{
+      labels=await verifyNewMapLabels(catalog);
+    }
+    if(generation!==sourceCatalogGeneration||mapId!==activeMapId)return false;
+    sourceCatalogById=byId;sourceCatalogByName=byName;sourceLabels=labels;
+    sourceCatalogReady=true;sourceCatalogError='';
+    updateMapSelectorUI();updateAuditNotice();table();renderReportRows();refreshKPIs();
+    if(!$('av-history').hidden)renderHistory();
     return true;
   })().catch(err=>{
+    if(generation!==sourceCatalogGeneration||mapId!==activeMapId)return false;
     sourceCatalogError=err?.message||String(err);sourceCatalogReady=false;updateAuditNotice();
     throw err;
-  }).finally(()=>{sourceCatalogLoading=null;});
+  }).finally(()=>{if(generation===sourceCatalogGeneration)sourceCatalogLoading=null;});
   return sourceCatalogLoading;
 }
 
@@ -698,7 +926,7 @@ function table() {
     total += Number(r.ha) || 0;
     const tr = document.createElement('tr');
     const name = document.createElement('td'); name.style.fontWeight = '700'; name.textContent = displayCuartel(r)+(auditRows([r]).length?' ⚠':'');
-    const ha = document.createElement('td'); ha.className = 'num'; ha.textContent = fmt(r.ha);
+    const ha = document.createElement('td'); ha.className = 'num'; ha.textContent = areaBreakdownForRow(r);
     const action = document.createElement('td'); action.style.textAlign = 'right';
     const b = document.createElement('button'); b.className = 'btn btn-sm';
     b.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>'; b.onclick = () => openModal(id);
@@ -729,7 +957,7 @@ function openModal(id) {
   const problem=r?auditRows([r]):[];
   const label=src?.estado==='ASOCIACION_POR_UBICACION'?src.identificacion:(c.name||'');
   $('modal-name').value=label;
-  $('modal-ha').value=verified?fmt(src.hectareas)+' ha':'SIN VALIDAR — BLOQUEADO';
+  $('modal-ha').value=verified?areaBreakdownForSource(src):'SIN VALIDAR — BLOQUEADO';
   const warning=$('modal-source-warning');warning.hidden=verified&&!problem.length;
   warning.textContent=problem.length?'ATENCIÓN: '+problem[0].reason+' Se requiere respaldo y revisión explícita.':
     !sourceCatalogReady?'Catálogo todavía no verificado. No se puede registrar.':
@@ -742,7 +970,7 @@ function openModal(id) {
   $('modal-confirm').checked=false;
   $('modal-confirm').disabled=!!r||!verified;
   $('modal-confirm-text').textContent=verified?
-    'Confirmo '+label+' y '+fmt(src.hectareas)+' ha según esta ubicación del plano.':
+    'Confirmo '+label+' y '+areaBreakdownForSource(src)+' según las etiquetas originales del plano.':
     'Registro bloqueado hasta verificar el plano.';
   $('modal-yes').hidden=!!r;
   $('modal-yes').disabled=true;
@@ -776,31 +1004,39 @@ $('modal-yes').onclick=()=>{
   if(data.registros[id]||!sourceCatalogReady||!src){toast('REGISTRO BLOQUEADO: ubicación no verificada','err');return;}
   // La fecha de TRABAJO es la seleccionada; registradoEn conserva el sello real.
   // Nunca sustituir aquí una jornada retroactiva por el día actual.
-  const ha=Number(src.hectareas),workDate=selectedWorkDate;
+  const ha=expectedHectares(src),workDate=selectedWorkDate,areaRule=areaRuleForSource(src);
   if(!validWorkDate(workDate)||!Number.isFinite(ha)||ha<=0){toast('Selecciona una fecha de jornada válida (no futura)','err');return;}
   modalWorking=true;$('modal-yes').disabled=true;
   const previous=data.registros[id];
   data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
-    catalogo:'v34-5-ubicaciones-svg-2026',origenSHA256:SOURCE_SVG_HASH,registradoEn:new Date().toISOString()};
+    ...(areaRule?{areaRuleVersion:AREA_RULE_VERSION,areaComponents:areaComponentsSnapshot(src)}:{}),
+    mapId:activeMapId,mapName:mapConfig.name,catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,registradoEn:new Date().toISOString()};
   if(!save()){
     if(previous)data.registros[id]=previous;else delete data.registros[id];
     modalWorking=false;toast('NO GUARDADO: comprueba almacenamiento','err');return;
   }
   drawFlags();table();updateAuditNotice();
   status.textContent=displayCuartel(data.registros[id])+' registrado.';
-  toast(displayCuartel(data.registros[id])+' · '+fmt(ha)+' ha guardado','ok');
+  toast(displayCuartel(data.registros[id])+' · '+areaBreakdownForSource(src)+' guardado','ok');
   closeModal();
 };
 $('modal-correct').onclick=()=>{
   const id=modalId,r=data.registros[id],src=validSourceById(id,r?.name);
   if(!id||!r||!sourceCatalogReady||!src||sourceForRow(r)?.id!==id){toast('Rectificación bloqueada: identidad no verificada','err');return;}
-  const current=Number(r.ha),expected=Number(src.hectareas);
-  if(Math.round(current*100)===Math.round(expected*100)){toast('El registro ya coincide con el SVG','ok');return;}
+  const current=Number(r.ha),expected=expectedHectares(src),areaRule=areaRuleForSource(src);
+  if(!auditRows([r]).length){toast('El registro ya coincide con la fuente verificada','ok');return;}
   const dateOriginal=r.fecha||'Sin fecha';
-  if(!confirm('RECTIFICACIÓN AUDITADA\n\nCuartel: '+displayCuartel(r)+'\nRegistrado: '+fmt(current)+' ha\nEn SVG original: '+fmt(expected)+' ha\nFecha original: '+dateOriginal+' (se conserva).\n\nSe documentará la corrección. ¿Confirmas tras revisar el plano y realizar un respaldo?'))return;
+  if(!confirm('RECTIFICACIÓN AUDITADA\n\nCuartel: '+displayCuartel(r)+'\nRegistrado: '+fmt(current)+' ha\nSuperficie oficial: '+areaBreakdownForSource(src)+'\nFecha original: '+dateOriginal+' (se conserva).\n\nSe guardará el desglose de cada componente y el total. ¿Confirmas tras revisar el plano y realizar un respaldo?'))return;
   const previous=JSON.parse(JSON.stringify(r));
-  const event={tipo:'RECTIFICACION_MANUAL',anteriorHa:current,nuevaHa:expected,fechaOriginal:dateOriginal,corregidoEn:new Date().toISOString(),fuenteSHA256:SOURCE_SVG_HASH};
-  data.registros[id]={...r,ha:expected,correcciones:[...(Array.isArray(r.correcciones)?r.correcciones:[]),event]};
+  const snapshot=areaComponentsSnapshot(src);
+  const event={tipo:'RECTIFICACION_MANUAL',anteriorHa:current,nuevaHa:expected,
+    desgloseAnterior:Array.isArray(r.areaComponents)?r.areaComponents:null,
+    desgloseNuevo:snapshot,reglaSuperficie:areaRule?AREA_RULE_VERSION:null,
+    fechaOriginal:dateOriginal,corregidoEn:new Date().toISOString(),fuenteSHA256:mapConfig.sourceSvgHash,mapId:activeMapId};
+  const updated={...r,ha:expected,correcciones:[...(Array.isArray(r.correcciones)?r.correcciones:[]),event]};
+  if(areaRule){updated.areaRuleVersion=AREA_RULE_VERSION;updated.areaComponents=snapshot;}
+  else{delete updated.areaRuleVersion;delete updated.areaComponents;}
+  data.registros[id]=updated;
   if(!save()){data.registros[id]=previous;toast('No se pudo guardar la rectificación','err');return;}
   drawFlags();table();updateAuditNotice();closeModal();
   toast(displayCuartel(r)+' rectificado; fecha conservada','ok');
@@ -911,7 +1147,7 @@ function buildSprayerBitmap() {
   if (!def || !symbol) return;
   const root = doc.createElementNS(NS, 'svg');
   root.setAttribute('xmlns', NS); root.setAttribute('viewBox', '0 0 200 250');
-  root.setAttribute('width', 100); root.setAttribute('height', 125);
+  root.setAttribute('width', 600); root.setAttribute('height', 750);
   root.append(def.cloneNode(true));
   for (const child of [...symbol.children]) root.append(child.cloneNode(true));
   const blob = new Blob([new XMLSerializer().serializeToString(root)], { type: 'image/svg+xml' });
@@ -925,11 +1161,13 @@ buildSprayerBitmap();
 function placeMarkers() {
   if (!svg || !svg.isConnected) return;
   const rect = viewport.getBoundingClientRect();
-  const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+  const ratio = Math.min(window.devicePixelRatio || 1, 2.0);
   const w = Math.max(1, Math.round(rect.width * ratio)), h = Math.max(1, Math.round(rect.height * ratio));
   if (markerOverlay.width !== w || markerOverlay.height !== h) { markerOverlay.width = w; markerOverlay.height = h; }
   const ctx = markerOverlay.getContext('2d', { alpha: true, desynchronized:true }); if (!ctx) return;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, rect.width, rect.height);
   markerScreenBounds.clear();
   if (!sprayerBitmap) return;
@@ -1040,13 +1278,13 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   let autoSvgLoaded=false, mapManifest=null, mapExtras=[];
   let tileLoaded=new Map(), tileGroup=null, vectorGroup=null, extraGroup=null, overviewImage=null;
   let overviewVectorGroup=null, overviewVectorLoading=false,overviewVectorReady=false;
-  let tilesFrame=0,mapReady=false,highDetail=false;
+  let tilesFrame=0,mapReady=false,highDetail=false,mapLoadGeneration=0;
   const vectorElements=new Map(),vectorLoading=new Set(),vectorFailed=new Map();
   let vectorQueue=[],vectorWorkers=0,detailWanted=new Set(),detailReportTimer=0;
   const detailStatus=$('map-detail-status'),detailRetry=$('map-retry-svg');
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
     (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  const MAX_VECTOR_SECTORS=isIOS?8:12; // No cargar el SVG completo en memoria.
+  const maxVectorSectors=()=>activeMapId==='proyecto-2026'?(isIOS?8:12):8; // Mapas nuevos: limitar memoria en iPhone y Android.
   function reportDetail(message='',state='loading'){
     clearTimeout(detailReportTimer);
     detailStatus.textContent=message;
@@ -1055,9 +1293,9 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     detailRetry.style.display=state==='error'?'inline-flex':'none';
     if(state==='ok') detailReportTimer=setTimeout(()=>{detailStatus.style.display='none';},2300);
   }
-  // La cartografía es idéntica: reutilizar caché de V34.4 y agregar sólo el catálogo y manifest nuevos.
-  const MAP_VERSION='agrovalle-map-v34-4-precision';
-  const SHELL_VERSION='agrovalle-shell-v34-6-fecha-manual';
+  // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
+  const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
+  const SHELL_VERSION='agrovalle-shell-v34-8-multi-map';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1075,7 +1313,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     })();
   });
   if (logoEl.complete && logoEl.naturalWidth>0) logoEl.dispatchEvent(new Event('load'));
-  const mapUrls=()=>['map-svg/manifest-v34-5.json',...mapManifest.files];
+  const mapUrls=()=>[mapConfig.manifest,...mapManifest.files];
   const setImage=(el,url)=>{
     // Usamos rutas del mismo origen: compatibles con Service Worker y Cache Storage.
     el.setAttribute('href',url);
@@ -1083,19 +1321,27 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   };
   async function initMap(){
     if(mapReady){scheduleTiles();return;}
-    status.textContent='Preparando SVG sectorizado…';
+    const generation=++mapLoadGeneration;
+    status.textContent='Preparando '+mapConfig.name+'…';
     try{
-      const [a,c]=await Promise.all([
-        fetch('map-svg/manifest-v34-5.json'),fetch('map-svg/extras.json'),loadSourceCatalog()
-      ]);
-      if(!a.ok||!c.ok)throw Error('Faltan archivos del mapa SVG (manifest o imágenes)');
-      mapManifest=await a.json();mapExtras=await c.json();
-      if(mapManifest.version!=='v34-5-ubicaciones-svg-2026'||!mapManifest.files.includes(SOURCE_CATALOG_URL))throw Error('Manifest cartográfico incorrecto o desactualizado');
+      await loadMapRegistry();
+      const [a,c]=await Promise.all([fetch(mapConfig.manifest),fetch(mapConfig.extras),loadSourceCatalog()]);
+      if(generation!==mapLoadGeneration)return;
+      if(!a.ok||!c.ok)throw Error('Faltan archivos del mapa '+mapConfig.name+' (manifest o imágenes).');
+      const manifestBuffer=await a.arrayBuffer();
+      const manifestHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',manifestBuffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+      if(manifestHash!==mapConfig.manifestHash)throw Error('El manifest de '+mapConfig.name+' no coincide con su huella SHA-256.');
+      mapManifest=JSON.parse(new TextDecoder().decode(manifestBuffer));mapExtras=await c.json();
+      if(mapManifest.version!==mapConfig.manifestVersion||mapManifest.sourceSvgSHA256!==mapConfig.sourceSvgHash||
+        !mapManifest.files.includes(mapConfig.catalog)||!mapManifest.files.includes(mapConfig.labels)||
+        !mapManifest.files.includes(mapConfig.overview)||(mapConfig.overviewVectors&&!mapManifest.files.includes(mapConfig.overviewVectors)))
+        throw Error('Manifest cartográfico incorrecto o desactualizado para '+mapConfig.name+'.');
+      if(activeMapId!=='proyecto-2026'&&mapManifest.files.some(file=>!(/^[a-f0-9]{64}$/i.test(mapManifest.integrity?.[file]||''))))
+        throw Error('El manifest no contiene una huella para cada archivo de '+mapConfig.name+'.');
       const root=node('svg',{viewBox:`0 0 ${mapManifest.width} ${mapManifest.height}`,width:'100%',height:'100%',preserveAspectRatio:'xMidYMid meet'});
       root.style.cssText='width:100%;height:100%;touch-action:none;overflow:visible';
-      // No se usa DOMParser con el SVG original ni se mantienen 46 MB de texto en memoria.
-      overviewImage=node('image',{x:0,y:0,width:mapManifest.width,height:mapManifest.height,preserveAspectRatio:'none', 'pointer-events':'none'});
-      setImage(overviewImage,'map-svg/vista-general-satelital.jpg');
+      overviewImage=node('image',{x:0,y:0,width:mapManifest.width,height:mapManifest.height,preserveAspectRatio:'none','pointer-events':'none'});
+      setImage(overviewImage,mapConfig.overview);
       tileGroup=node('g',{'pointer-events':'none'});
       vectorGroup=node('g',{'pointer-events':'none'});
       extraGroup=node('g',{'pointer-events':'none'});
@@ -1103,21 +1349,23 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       root.append(overviewImage,overviewVectorGroup,tileGroup,vectorGroup,extraGroup);
       svg=root;container.replaceChildren(root);
       detected=[];
-      // Cada hectárea proviene de la etiqueta recíproca del mismo SVG original.
-      // No se utiliza distancia al área más cercana durante el registro.
+      // Las coordenadas y superficies proceden del catálogo verificado del mapa activo.
       for(const c of sourceCatalogById.values()){
+        const label=sourceLabels[c.fuenteNombreIndice];
         data.contornos[c.id]={...(data.contornos[c.id]||{}),name:c.nombre,seedX:c.x,seedY:c.y,
-          labelHalfWidth:6,labelHeight:6,ha:(c.estado==='ASOCIACION_UNICA'||c.estado==='ASOCIACION_POR_UBICACION')?c.hectareas:null,
-          catalogo:'v34-5-ubicaciones-svg-2026',validado:(c.estado==='ASOCIACION_UNICA'||c.estado==='ASOCIACION_POR_UBICACION')};
+          labelHalfWidth:Number(label?.halfWidth)||6,labelHeight:Number(label?.height)||6,
+          ha:(c.estado==='ASOCIACION_UNICA'||c.estado==='ASOCIACION_POR_UBICACION')?c.hectareas:null,
+          catalogo:mapConfig.catalogVersion,validado:(c.estado==='ASOCIACION_UNICA'||c.estado==='ASOCIACION_POR_UBICACION')};
         detected.push({text:c.nombre,x:c.x,y:c.y,id:c.id});
       }
+      if(!save())throw Error('No se pudo guardar la geometría de referencia del mapa.');
       mapReady=true;autoSvgLoaded=true;reset();scheduleTiles();drawFlags();table();
       loadOverviewVectors();
-      status.textContent=`Mapa SVG listo · ${detected.length} etiquetas. Instálalo una vez para trabajar offline.`;
-      updateMapInstallStatus().catch(()=>{});
-      updateAuditNotice();
+      status.textContent='Mapa '+mapConfig.name+' listo · '+mapConfig.validCount+' cuarteles habilitados · '+mapConfig.blockedCount+' bloqueados.';
+      updateMapInstallStatus().catch(()=>{});updateAuditNotice();updateMapSelectorUI();
     }catch(err){
-      status.textContent='No se pudo abrir el mapa: '+(err.message||err);
+      if(generation!==mapLoadGeneration)return;
+      status.textContent='No se pudo abrir '+mapConfig.name+': '+(err.message||err);
       toast('Mapa SVG no disponible: '+(err.message||err),'err');
     }
   }
@@ -1125,16 +1373,22 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   // Al acercar se libera y se reemplaza por los sectores SVG originales.
   async function loadOverviewVectors(){
     if(overviewVectorLoading||overviewVectorReady||highDetail||!overviewVectorGroup)return;
+    if(!mapConfig.overviewVectors){overviewVectorReady=true;return;}
+    const generation=mapLoadGeneration,mapId=activeMapId;
     overviewVectorLoading=true;
     try{
-      const resp=await fetch('map-svg/resumen-vectores-original.svg');
+      const resp=await fetch(mapConfig.overviewVectors);
       if(!resp.ok)throw Error('HTTP '+resp.status);
-      const doc=new DOMParser().parseFromString(await resp.text(),'image/svg+xml');
+      const buffer=await resp.arrayBuffer();
+      const expected=mapManifest?.integrity?.[mapConfig.overviewVectors];
+      if(expected){
+        const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+        if(actual!==expected)throw Error('Resumen vectorial alterado para '+mapConfig.name+'.');
+      }
+      const doc=new DOMParser().parseFromString(new TextDecoder().decode(buffer),'image/svg+xml');
       if(doc.documentElement.localName!=='svg'||doc.querySelector('parsererror'))throw Error('SVG general inválido');
       doc.querySelectorAll('script,foreignObject').forEach(el=>el.remove());
-      if(highDetail)return;
-      // Los identificadores del SVG general mantienen sus referencias internas.
-      // Los SVG detallados reciben identificadores únicos por sector.
+      if(generation!==mapLoadGeneration||mapId!==activeMapId||highDetail||!overviewVectorGroup)return;
       const fragment=document.createDocumentFragment();
       for(const el of [...doc.documentElement.children])fragment.append(document.importNode(el,true));
       overviewVectorGroup.replaceChildren(fragment);
@@ -1142,9 +1396,11 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       status.textContent='Mapa general SVG cargado. Acerca para ver todos los detalles.';
       reportDetail('');
     }catch(e){
-      console.warn('No se pudo cargar el SVG general',e);
-      status.textContent='Vista general fotográfica; acerca para cargar los sectores SVG. '+(e.message||e);
-    }finally{overviewVectorLoading=false;}
+      if(generation===mapLoadGeneration){
+        console.warn('No se pudo cargar el SVG general',e);
+        status.textContent='Vista general fotográfica; acerca para cargar los sectores SVG. '+(e.message||e);
+      }
+    }finally{if(generation===mapLoadGeneration)overviewVectorLoading=false;}
   }
   /* V34.2: Safari incorpora sectores vectoriales COMO SVG REAL dentro del
      documento, no mediante <image href="otro.svg">. Solo los visibles.
@@ -1193,19 +1449,25 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   async function loadVectorSector(job){
-    const {key,x,y,w,h}=job;
+    const {key,x,y,w,h}=job,generation=mapLoadGeneration,mapId=activeMapId;
     if(vectorElements.has(key)||vectorLoading.has(key)||!detailWanted.has(key))return;
     vectorLoading.add(key);
     try{
       let lastError;
       for(let attempt=0;attempt<2;attempt++){
         try{
-          const response=await fetch(`map-svg/vectores/${key}.svg`);
+          const response=await fetch(`${mapConfig.vectorDir}${key}.svg`);
           if(!response.ok)throw Error('HTTP '+response.status);
-          const xml=await response.text();
-          if(!detailWanted.has(key))return;
+          const buffer=await response.arrayBuffer();
+          const expected=mapManifest?.integrity?.[`${mapConfig.vectorDir}${key}.svg`];
+          if(expected){
+            const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+            if(actual!==expected)throw Error('Vector alterado: '+key);
+          }
+          const xml=new TextDecoder().decode(buffer);
+          if(generation!==mapLoadGeneration||mapId!==activeMapId||!detailWanted.has(key))return;
           const el=makeInlineVector(xml,key,x,y,w,h);
-          if(!detailWanted.has(key))return;
+          if(generation!==mapLoadGeneration||mapId!==activeMapId||!detailWanted.has(key))return;
           vectorGroup.append(el);
           vectorElements.set(key,el);
           vectorFailed.delete(key);
@@ -1214,11 +1476,12 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       }
       if(!vectorElements.has(key)&&detailWanted.has(key))throw lastError;
     }catch(e){
-      vectorFailed.set(key,e?.message||String(e));
-      console.warn('No se pudo dibujar el SVG del sector',key,e);
+      if(generation===mapLoadGeneration){
+        vectorFailed.set(key,e?.message||String(e));
+        console.warn('No se pudo dibujar el SVG del sector',key,e);
+      }
     }finally{
-      vectorLoading.delete(key);
-      refreshDetailStatus();
+      if(generation===mapLoadGeneration){vectorLoading.delete(key);refreshDetailStatus();}
     }
   }
   function runVectorQueue(){
@@ -1267,7 +1530,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     const vectorCoords=sectorCoords(mapManifest.vectorSize,mapManifest.vectorCols,mapManifest.vectorRows);
     // Al alejarse tanto que hay que dibujar muchos sectores usamos JPEG liviano,
     // pero desde un zoom moderado activamos el SVG real sin esperar hasta 0.43.
-    const detail=ratio>=0.105&&vectorCoords.length>0&&vectorCoords.length<=MAX_VECTOR_SECTORS;
+    const detail=ratio>=0.105&&vectorCoords.length>0&&vectorCoords.length<=maxVectorSectors();
     if(detail!==highDetail){
       highDetail=detail;
       if(detail){
@@ -1280,6 +1543,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       tileGroup.style.display=detail?'':'none';
       vectorGroup.style.display=detail?'':'none';
       extraGroup.style.display=detail?'':'none';
+      if(overviewImage)overviewImage.style.display=detail?'none':'';
     }
     if(!detail){reportDetail('');return;}
     const keepImages=new Set();
@@ -1288,7 +1552,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       if(tileLoaded.has(key))continue;
       const img=node('image',{x:x*mapManifest.photoSize,y:y*mapManifest.photoSize,width:w,height:h,
         preserveAspectRatio:'none','pointer-events':'none'});
-      setImage(img,`map-svg/foto/${key}.jpg`);
+      setImage(img,`${mapConfig.photoDir}${key}.jpg`);
       tileGroup.append(img);tileLoaded.set(key,img);
     }
     for(const [key,el] of tileLoaded)if(!keepImages.has(key)){el.remove();tileLoaded.delete(key);}
@@ -1326,13 +1590,13 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     const err = e && e.message ? e.message : String(e);
     if (/quota|storage|espacio/i.test(err) || e?.name === 'QuotaExceededError')
       return `Almacenamiento insuficiente (${file}): ${err}. Libera espacio y reintenta.`;
-    if (/HTTP 404/.test(err)) return `No se encontró ${file} en el servidor (HTTP 404). Comprueba que hayas publicado toda la carpeta map-svg/.`;
+    if (/HTTP 404/.test(err)) return `No se encontró ${file} en el servidor (HTTP 404). Comprueba que hayas publicado todas las carpetas de mapas.`;
     if (/HTML|inválido|invalido/i.test(err)) return `Servidor mal configurado: ${file} no devolvió el tipo de archivo correcto. Revisa Cloudflare y las rutas.`;
     return `Falló ${file}: ${err}. Comprueba la red y reintenta; los archivos ya instalados se conservan.`;
   }
   async function updateMapInstallStatus() {
     if (!mapManifest || !('caches' in window)) return;
-    const cache = await caches.open(MAP_VERSION), urls=mapUrls();
+    const cache = await caches.open(mapCacheName()), urls=mapUrls();
     let ready = 0;
     for (const u of urls) if (await cache.match(u)) ready++;
     if (installingMap) return;
@@ -1340,7 +1604,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     try{
       const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;
       const shell=await caches.open(SHELL_VERSION);
-      const essential=await Promise.all(['./index.html','./manifest.webmanifest','./assets/fontawesome/css/all.min.css'].map(u=>shell.match(u)));
+      const essential=await Promise.all(['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css'].map(u=>shell.match(u)));
       hasShell=!!reg?.active && essential.every(Boolean);
     }catch(e){}
     const readyOffline=ready===urls.length && sourceCatalogReady && hasShell;
@@ -1365,9 +1629,14 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
           try{JSON.parse(new TextDecoder().decode(bytes));}
           catch(e){throw Error('JSON inválido o HTML devuelto en lugar del archivo');}
         }
-        if(u===SOURCE_CATALOG_URL){
+        let expectedHash=null;
+        if(u===mapConfig.manifest)expectedHash=mapConfig.manifestHash;
+        else if(u===mapConfig.catalog)expectedHash=mapConfig.catalogHash;
+        else if(u===mapConfig.labels)expectedHash=mapConfig.labelsHash;
+        else expectedHash=mapManifest?.integrity?.[u]||null;
+        if(expectedHash){
           const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
-          if(actual!==SOURCE_CATALOG_HASH)throw Error('Catálogo alterado o desactualizado: descarga bloqueada');
+          if(actual!==expectedHash)throw Error('Archivo cartográfico alterado o desactualizado: '+u+' · descarga bloqueada');
         }
         // Guardar únicamente archivos completos y verificados.
         await cache.put(u, new Response(buffer,{status:200,headers:resp.headers}));
@@ -1392,7 +1661,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     const urls=mapUrls();let ok=0,failedFile='';
     try{
       if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
-      const cache=await caches.open(MAP_VERSION);
+      const cache=await caches.open(mapCacheName());
       const failures=[];let cursor=0;
       mapInstallMessage('Descargando SVG y fotografía satelital. Conserva esta pantalla abierta hasta verificar todos los recursos.');
       // Tres solicitudes simultáneas, nunca cientos de descargas concurrentes en iOS.
@@ -1420,7 +1689,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
       if(verified!==urls.length)throw Error(`Descarga incompleta: ${verified}/${urls.length}`);
       const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration().catch(()=>null):null;
       const shell=await caches.open(SHELL_VERSION);
-      const essentials=['./index.html','./manifest.webmanifest','./assets/fontawesome/css/all.min.css',
+      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css',
         './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2',
         './assets/icon-192.png','./assets/icon-512.png'];
       const checks=await Promise.all(essentials.map(u=>shell.match(u)));
@@ -1431,11 +1700,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
         // Cuando el mapa está instalado, basta el estado compacto del botón.
         // Ocultar el aviso extenso sin afectar los errores ni el progreso de descarga.
         mapInstallMessage('');
-        // Eliminar versiones antiguas solo cuando la nueva está completa.
-        for(const key of await caches.keys()){
-          if((key.startsWith('agrovalle-map-v33-')||key.startsWith('agrovalle-map-v34-'))&&key!==MAP_VERSION)
-            await caches.delete(key);
-        }
+        // Se conservan los cachés de otros mapas para que cada sector siga disponible offline.
       }else{
         installLabel.textContent='Mapa descargado ✓';
         mapInstallMessage(`Plano SVG completo (${verified}/${urls.length}). Pendiente confirmar archivos esenciales del Service Worker. Reabre la página con internet y vuelve a comprobar la instalación antes de trabajar sin señal.`);
@@ -1511,8 +1776,11 @@ function renderDetectedList() {
   for (const d of entries.slice(0, 250)) {
     const b = document.createElement('button');
     b.className = 'det-item' + (done.has(d.id) ? ' done' : '');
-    const n = document.createElement('b'); n.textContent = sourceCatalogById.get(d.id)?.identificacion||d.text;
-    const h = document.createElement('span'); h.textContent = sourceCatalogById.get(d.id)?.estado==='ASOCIACION_POR_UBICACION' ? '✓ UBICACIÓN VALIDADA' : Number(data.contornos[d.id]?.ha)>0 ? fmt(data.contornos[d.id].ha)+' ha' : '⚠ SIN VALIDAR';
+    const src=sourceCatalogById.get(d.id),valid=validSourceById(d.id,d.text);
+    const n = document.createElement('b'); n.textContent = src?.identificacion||d.text;
+    const h = document.createElement('span'); h.textContent = valid
+      ?(valid.estado==='ASOCIACION_POR_UBICACION'?'✓ UBICACIÓN VALIDADA · ':'')+areaBreakdownForSource(valid)
+      :'⚠ PENDIENTE DE VALIDACIÓN · REGISTRO BLOQUEADO';
     b.append(n, h); b.onclick = () => openModal(d.id); host.append(b);
   }
 }
@@ -1562,14 +1830,20 @@ document.addEventListener('keydown', e => {
 });
 
 $('btn-data-backup').onclick=()=>{
-  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_original_sin_alteraciones',catalogo:'v34-5-ubicaciones-svg-2026',
-    registros:localStorage.getItem(STORE),jornadas:localStorage.getItem(JORNADAS_STORE),informe:localStorage.getItem(REPORT_STORE)};
+  const prefixes=[STORE_BASE,REPORT_STORE_BASE,WORK_DATE_STORE_BASE,JORNADAS_STORE_BASE];
+  const stores={};
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(prefixes.some(base=>key===base||key.startsWith(base+'__')))stores[key]=localStorage.getItem(key);
+  }
+  const backup={exportadoEn:new Date().toISOString(),tipo:'respaldo_multi_mapa_v34_8',version:'v34.8-multi-map',
+    mapaActivo:activeMapId,mapaActivoNombre:mapConfig.name,stores};
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download='GESTION_AGRICOLA_respaldo_'+localDay()+'.json';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),10000);toast('Respaldo descargado; conserva este archivo en lugar seguro','ok');
 };
 $('btn-reset-data').onclick = () => {
-  if (!confirm('¿Eliminar todos los registros guardados?')) return;
+  if (!confirm('¿Eliminar los registros activos del mapa '+mapConfig.name+'? El historial y los demás mapas se conservarán.')) return;
   data.registros = {}; save(); drawFlags(); table(); toast('Registros eliminados', 'warn');
 };
 
@@ -1657,6 +1931,65 @@ const persistReport = () => {
   try { localStorage.setItem(REPORT_STORE, JSON.stringify(Object.fromEntries(repIds.filter(id=>id!=='date').map(id => [id, rep(id).value])))); }
   catch (e) { rep('message').textContent = 'No se pudieron guardar las preferencias del informe.'; }
 };
+function loadActiveMapFormState(){
+  const defaults={company:'AGRO VALLE ESCONDIDO SPA',contractor:'PABLO CORNEJO',supervisor:'Juan Pablo',
+    sector:'Palto',people:'10',farm:'Fundo Arrayyanes',mixture:'2000-reglone',custom:''};
+  for(const [id,value] of Object.entries(defaults))rep(id).value=value;
+  try{
+    const saved=JSON.parse(localStorage.getItem(REPORT_STORE)||'{}');
+    for(const id of repIds)if(id!=='date'&&typeof saved[id]==='string')rep(id).value=saved[id];
+  }catch(e){}
+  selectedWorkDate=localDay();manualWorkDate=false;
+  try{
+    const draft=JSON.parse(localStorage.getItem(WORK_DATE_STORE)||'null');
+    if(draft?.manual&&validWorkDate(draft.date)&&draft.date!==localDay()){
+      selectedWorkDate=draft.date;manualWorkDate=true;
+    }else if(draft){localStorage.removeItem(WORK_DATE_STORE);}
+  }catch(e){}
+  rep('date').value=selectedWorkDate;updateWorkDateHint();toggleCustom();
+  rep('preview').hidden=true;rep('preview').textContent='';rep('message').textContent='';
+}
+async function switchActiveMap(nextId){
+  await loadMapRegistry();
+  const next=mapRegistry.find(m=>m.id===nextId);
+  if(!next){toast('Mapa no disponible en el catálogo','err');updateMapSelectorUI();return false;}
+  if(next.id===activeMapId){updateMapSelectorUI();return true;}
+  const oldName=mapConfig.name;
+  const hasWork=Object.keys(data.registros).length>0||Object.keys(loadJornadas()).length>0;
+  const message=hasWork
+    ?'Cambiar de '+oldName+' a '+next.name+'?\n\nLos registros y jornadas de '+oldName+' quedarán guardados en su propio espacio. Se abrirán los datos independientes de '+next.name+'. No se mezclarán superficies ni cuarteles.'
+    :'Seleccionar '+next.name+' para esta jornada?\n\nSus cuarteles y hectáreas se cargarán desde su catálogo independiente.';
+  if(!confirm(message)){updateMapSelectorUI();return false;}
+  if(!save()){toast('No se pudo guardar el mapa actual; cambio cancelado','err');updateMapSelectorUI();return false;}
+  if(document.body.classList.contains('agro-fullscreen'))leaveFull();
+  if($('agro-modal').classList.contains('show'))closeModal();
+  clearHistoricalPanel(false);
+  activeMapId=next.id;mapConfig=next;
+  try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}
+  setStorageKeys(activeMapId);data=readStoredMapData();
+  sourceCatalogGeneration++;sourceCatalogLoading=null;sourceCatalogReady=false;
+  sourceCatalogById=new Map();sourceCatalogByName=new Map();sourceLabels=[];sourceCatalogError='';
+  mapLoadGeneration++;mapReady=false;mapManifest=null;mapExtras=[];autoSvgLoaded=false;highDetail=false;
+  overviewVectorReady=false;overviewVectorLoading=false;overviewImage=null;overviewVectorGroup=null;
+  tileGroup=null;vectorGroup=null;extraGroup=null;svg=null;detected=[];
+  tileLoaded.clear();vectorElements.clear();vectorLoading.clear();vectorFailed.clear();vectorQueue=[];detailWanted.clear();
+  markerBounds.clear();markerScreenBounds.clear();markerOverlay.style.visibility='hidden';
+  const spinner=document.createElement('div');spinner.id='loading-spinner';
+  spinner.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i><p style="font-size:12.5px;margin:0">Preparando mapa seleccionado…</p><span style="font-size:10.5px;color:#4d6579">El catálogo de cuarteles se comprobará antes de permitir registros</span>';
+  container.replaceChildren(spinner);
+  loadActiveMapFormState();updateMapSelectorUI();mapInstallMessage('');installLabel.textContent='Instalar mapa';
+  table();
+  try{
+    await loadSourceCatalog();
+    if(!$('av-main').hidden)await initMap();
+    else{table();updateAuditNotice();}
+    toast(next.name+' seleccionado','ok');return true;
+  }catch(err){
+    sourceCatalogError=err?.message||String(err);updateAuditNotice();
+    toast('No se pudo validar '+next.name+'. Registro bloqueado.','err');return false;
+  }
+}
+$('map-selector').addEventListener('change',e=>{switchActiveMap(e.target.value).catch(err=>{updateMapSelectorUI();toast(err?.message||String(err),'err');});});
 function toggleCustom() { rep('custom-wrap').hidden = rep('mixture').value !== 'other'; }
 for (const id of repIds.filter(id=>id!=='date')) rep(id).addEventListener('change', () => { clearHistoricalPanel(); persistReport(); toggleCustom(); renderReportRows(); refreshKPIs(); });
 rep('date').addEventListener('change',()=>selectWorkDate(rep('date').value));
@@ -1677,7 +2010,7 @@ function renderReportRows() {
   }
   for (const r of rows) {
     const line = document.createElement('div');
-    line.textContent = '• ' + displayCuartel(r) + ': ' + fmt(r.ha) + ' ha' + (r.correcciones?.length?' · RECTIFICADO':'');
+    line.textContent = '• ' + displayCuartel(r) + ': ' + areaBreakdownForRow(r) + (r.correcciones?.length?' · RECTIFICADO':'');
     host.append(line);
   }
   const issues=auditRows(rows);
@@ -1704,7 +2037,8 @@ function reportText() {
   const [year, month, day] = date.split('-');
   return [
     '*📋 INFORME DE APLICACIÓN DE HERBICIDAS*',
-    '*Sector:* ' + rep('sector').value.trim(), '',
+    '*Sector:* ' + rep('sector').value.trim(),
+    '*🗺️ Mapa de registro:* ' + mapConfig.name, '',
     '*📅 Fecha:* ' + day + '-' + month + '-' + year,
     '*👤 Contratista:* ' + rep('contractor').value.trim(),
     '*🏢 Empresa:* ' + rep('company').value.trim(),
@@ -1712,7 +2046,7 @@ function reportText() {
     '*👥 Personal:* ' + people + ' personas',
     '*💧 Mezcla total:* ' + mix, '',
     '*📍 Detalle por cuartel*',
-    ...rows.map(r => '• ' + displayCuartel(r) + ': ' + fmt(r.ha) + ' ha' + (r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
+    ...rows.map(r => '• ' + displayCuartel(r) + ': ' + areaBreakdownForRow(r) + (r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
     '*🏁 Total aplicado:* *' + fmt(rows.reduce((n, r) => n + Number(r.ha || 0), 0)) + ' ha*'
   ].join('\n');
 }
@@ -1756,6 +2090,7 @@ $('rep-save-btn').onclick = () => {
   const entryId = 'j_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
   store[entryId] = {
     id: entryId,
+    mapId:activeMapId,mapName:mapConfig.name,catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,
     fecha: date,
     company: rep('company').value.trim(),
     contractor: rep('contractor').value.trim(),
@@ -1765,7 +2100,10 @@ $('rep-save-btn').onclick = () => {
     people: Number(rep('people').value) || 0,
     mixture: mix,
     cuarteles: rows.length,
-    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,ha: Number(r.ha) || 0,registradoEn:r.registradoEn||null,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })),
+    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,mapId:activeMapId,mapName:mapConfig.name,
+      catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,ha: Number(r.ha) || 0,
+      areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
+      registradoEn:r.registradoEn||null,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })),
     total,
     savedAt: new Date().toISOString()
   };
@@ -1842,6 +2180,41 @@ function historyDetail(label, value) {
   return item;
 }
 
+function archivedSpecialRowsCanBeRectified(rows) {
+  const invalid=rows.filter(r=>auditRows([r]).length);
+  return invalid.length>0&&invalid.every(r=>{
+    const src=sourceForRow(r);
+    return !!src&&!!areaRuleForSource(src);
+  });
+}
+function rectifyArchivedSpecialRows(entryKey) {
+  const store=loadJornadas(),j=store[entryKey];
+  if(!j||!Array.isArray(j.detalle)){toast('No se encontró la jornada archivada','err');return;}
+  const invalid=j.detalle.filter(r=>auditRows([r]).length);
+  if(!invalid.length||!archivedSpecialRowsCanBeRectified(j.detalle)){toast('La jornada contiene errores que requieren revisión individual; no se modificó.','err');return;}
+  const lines=invalid.map(r=>{
+    const src=sourceForRow(r);
+    return displayCuartel(r)+': '+fmt(r.ha)+' ha → '+areaBreakdownForSource(src);
+  });
+  if(!confirm('RECTIFICACIÓN AUDITADA DE JORNADA ARCHIVADA\\n\\n'+lines.join('\\n')+
+    '\\n\\nSe conservará la fecha, se registrará el valor anterior y el nuevo desglose. ¿Confirmas después de respaldar la jornada?'))return;
+  const previous=JSON.parse(JSON.stringify(j));
+  for(const row of j.detalle){
+    if(!auditRows([row]).length)continue;
+    const src=sourceForRow(row),rule=areaRuleForSource(src),expected=expectedHectares(src);
+    const snapshot=areaComponentsSnapshot(src),old=Number(row.ha);
+    const event={tipo:'RECTIFICACION_SUPERFICIE_COMPUESTA',anteriorHa:old,nuevaHa:expected,
+      desgloseNuevo:snapshot,reglaSuperficie:AREA_RULE_VERSION,fechaOriginal:j.fecha||'Sin fecha',
+      corregidoEn:new Date().toISOString(),fuenteSHA256:mapConfig.sourceSvgHash,mapId:activeMapId};
+    row.ha=expected;row.areaRuleVersion=AREA_RULE_VERSION;row.areaComponents=snapshot;
+    row.correcciones=[...(Array.isArray(row.correcciones)?row.correcciones:[]),event];
+  }
+  j.total=j.detalle.reduce((n,r)=>n+(Number(r.ha)||0),0);
+  if(!saveJornadas(store)){store[entryKey]=previous;toast('No se pudo guardar la rectificación histórica.','err');return;}
+  updateAuditNotice();renderHistory();
+  toast('Jornada rectificada con desglose y auditoría.','ok');
+}
+
 function historyExtract(date, rows, j) {
   const dateText = date === 'Sin fecha' ? 'Sin fecha' : date.split('-').reverse().join('-');
   const issues=auditRows(rows);if(issues.length)throw Error('Extracto histórico BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
@@ -1849,6 +2222,7 @@ function historyExtract(date, rows, j) {
   const lines = [
     '*📋 EXTRACTO DE JORNADA · AGRO VALLE*',
     '*📅 Fecha:* ' + dateText,
+    '*🗺️ Mapa de registro:* ' + (j?.mapName || mapConfig.name),
     '*🏢 Empresa:* ' + (j?.company || '—'),
     '*👤 Contratista:* ' + (j?.contractor || '—'),
     '*👨‍💼 Supervisor:* ' + (j?.supervisor || '—'),
@@ -1857,7 +2231,7 @@ function historyExtract(date, rows, j) {
     '*👥 Personal:* ' + (j?.people == null ? '—' : j.people + ' personas'),
     '*💧 Mezcla utilizada:* ' + (j?.mixture || '—'), '',
     '*📍 CUARTELES Y HECTÁREAS*',
-    ...rows.map(r => '• ' + displayCuartel(r) + ': ' + fmt(r.ha) + ' ha' + (r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
+    ...rows.map(r => '• ' + displayCuartel(r) + ': ' + areaBreakdownForRow(r) + (r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
     '*Cuarteles:* ' + rows.length,
     '*🏁 TOTAL APLICADO: ' + fmt(total) + ' ha*'
   ];
@@ -1903,6 +2277,7 @@ function renderHistory() {
     const card = document.createElement('article'); card.className = 'hist-card';
     const title = document.createElement('h3');
     title.textContent = date === 'Sin fecha' ? 'Registros anteriores sin fecha' : date.split('-').reverse().join('-');
+    if(j?.mapName)title.textContent+=' · '+j.mapName;
     if (saved) { const sameDay = groups.filter(([d, e]) => d === date && e.saved); if (sameDay.length > 1) title.textContent += ' · Jornada ' + (sameDay.length - sameDay.findIndex(([, e]) => e.key === entry.key)); }
     card.append(title);
     const meta = document.createElement('div'); meta.className = 'hist-meta';
@@ -1926,7 +2301,7 @@ function renderHistory() {
       section.style.marginTop = '12px'; section.textContent = 'Datos de la jornada'; details.append(section);
       for (const [label, value] of [
         ['Fecha', date === 'Sin fecha' ? '—' : date.split('-').reverse().join('-')],
-        ['Empresa', j.company], ['Contratista', j.contractor],
+        ['Mapa de registro',j.mapName||mapConfig.name],['Empresa', j.company], ['Contratista', j.contractor],
         ['Supervisor', j.supervisor], ['Sector', j.sector],
         ['Predio', j.farm], ['Personal', j.people == null ? '—' : j.people + ' personas'],
         ['Mezcla utilizada', j.mixture]
@@ -1939,7 +2314,7 @@ function renderHistory() {
     const heading = document.createElement('p'); heading.className = 'sec-title';
     heading.style.marginTop = '15px'; heading.textContent = 'Cuarteles y hectáreas'; details.append(heading);
     if (!rows.length) details.append(historyDetail('Cuarteles', 'Sin cuarteles registrados'));
-    for (const r of rows) details.append(historyDetail(displayCuartel(r), fmt(r.ha) + ' ha' + (r.correcciones?.length?' · RECTIFICADO':'')));
+    for (const r of rows) details.append(historyDetail(displayCuartel(r), areaBreakdownForRow(r) + (r.correcciones?.length?' · RECTIFICADO':'')));
     const errors=auditRows(rows);
     if(errors.length){const warning=document.createElement('p');warning.style.cssText='color:#fb7185;font-weight:800';warning.textContent='⚠ PENDIENTE DE AUDITORÍA: '+errors.slice(0,3).map(p=>p.name+' '+p.reason).join(' | ');details.append(warning);}
     const total = historyDetail('TOTAL APLICADO', errors.length?'NO VALIDADO':fmt(sum) + ' ha');
@@ -1956,6 +2331,12 @@ function renderHistory() {
       toggle.innerHTML = open ? '<i class="fa-solid fa-chevron-up"></i>Ocultar detalles' : '<i class="fa-solid fa-list"></i>Ver jornada completa';
     };
     actions.append(toggle);
+    if(saved&&archivedSpecialRowsCanBeRectified(rows)){
+      const rectify=document.createElement('button');rectify.type='button';rectify.className='btn btn-sm';
+      rectify.innerHTML='<i class="fa-solid fa-shield-halved"></i>Rectificar superficies compuestas';
+      rectify.onclick=()=>rectifyArchivedSpecialRows(entry.key);
+      actions.append(rectify);
+    }
     const share = document.createElement('button');
     share.type = 'button'; share.className = 'btn btn-sm';
     share.innerHTML = '<i class="fa-brands fa-whatsapp"></i>Compartir por WhatsApp';
@@ -1977,7 +2358,12 @@ function renderHistory() {
             toggleCustom();
           }
         }
-        historicalPanel = { rows: rows.map(r => ({ name: r.name,cuartelId:r.cuartelId||null,ha: Number(r.ha) || 0,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })), key: entry.key };
+        historicalPanel = { rows: rows.map(r => ({ name:r.name,cuartelId:r.cuartelId||null,
+          mapId:r.mapId||j?.mapId||activeMapId,mapName:r.mapName||j?.mapName||mapConfig.name,
+          catalogo:r.catalogo||j?.catalogo||mapConfig.catalogVersion,
+          origenSHA256:r.origenSHA256||j?.origenSHA256||mapConfig.sourceSvgHash,ha:Number(r.ha)||0,
+          areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
+          correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })), key: entry.key };
         persistReport(); renderReportRows(); switchTab('panel');
         toast('Jornada archivada cargada con ' + rows.length + ' cuarteles y ' + fmt(sum) + ' ha.', 'ok');
       };
@@ -2023,14 +2409,14 @@ document.querySelectorAll('.quick button[data-range]').forEach(b => {
 $('hist-export').onclick = () => {
   const groups = filteredGroups();
   if (!groups.length) { toast('Nada que exportar en ese rango', 'warn'); return; }
-  const rows = [['Fecha', 'Cuartel', 'Hectareas', 'Rectificaciones - detalle', 'Empresa', 'Contratista', 'Supervisor', 'Predio', 'Sector', 'Personal', 'Mezcla utilizada']];
+  const rows = [['Mapa ID','Mapa','Fecha','Cuartel','Hectareas total','Desglose de hectareas','Rectificaciones - detalle','Empresa','Contratista','Supervisor','Predio','Sector','Personal','Mezcla utilizada']];
   if(!mustBeAudited(groups.flatMap(([,entry])=>entry.rows),'exportar el historial'))return;
   const j = loadJornadas();
   for (const [date, entry] of groups) {
     for (const r of entry.rows) {
       const meta = entry.jornada || {};
       const changes=Array.isArray(r.correcciones)?r.correcciones.map(c=>String(c.anteriorHa)+' ha -> '+String(c.nuevaHa)+' ha ('+(c.corregidoEn||'sin hora')+')').join(' | '):'';
-      rows.push([date, displayCuartel(r), String(Number(r.ha || 0)).replace('.', ','), changes||'NO', meta.company || '', meta.contractor || '', meta.supervisor || '', meta.farm || '', meta.sector || '', String(meta.people ?? ''), meta.mixture || '']);
+      rows.push([meta.mapId||activeMapId,meta.mapName||mapConfig.name,date,displayCuartel(r),fmt(r.ha),areaBreakdownForRow(r),changes||'NO',meta.company||'',meta.contractor||'',meta.supervisor||'',meta.farm||'',meta.sector||'',String(meta.people??''),meta.mixture||'']);
     }
   }
   const csv = '\uFEFF' + rows.map(l => l.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');

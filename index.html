@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.10 Historial visual</title>
+<title>GESTION AGRICOLA · V34.11 Historial visual</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
@@ -81,7 +81,6 @@ body.agro-fullscreen #agro-modal{z-index:150}
 .top-actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;
   margin-left:auto;min-width:0;white-space:nowrap}
 .top-actions .pill{justify-content:center}
-.sun-toggle{cursor:pointer;font:inherit}
 #install-map{white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;padding:6px 11px;
   border-radius:999px;border:1px solid var(--line);color:#9fd8e8;background:rgba(34,211,238,.07)}
@@ -310,7 +309,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 }
 #audit-notice[hidden],#rep-date-override[hidden]{display:none!important}
 
-/* V34.10: vista histórica del mapa */
+/* V34.11: vista histórica del mapa */
 #history-map-banner{position:absolute;left:12px;right:64px;top:60px;z-index:24;
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   padding:9px 11px;border:1px solid rgba(34,211,238,.75);border-radius:13px;
@@ -323,48 +322,11 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 #history-map-back{min-height:36px;padding:7px 10px;background:#10263a;border-color:#8bdcf7;color:#fff}
 #history-map-banner .btn{white-space:nowrap}
 
-/* V34.10: alto contraste para trabajo en exteriores; no altera el SVG ni la imagen satelital. */
-body.sunlight-mode{
-  --bg:#02060b;--panel:#071321;--line:rgba(155,218,255,.58);
-  --txt:#ffffff;--muted:#e0edf8;
-}
-body.sunlight-mode .aurora,body.sunlight-mode .grid-bg{opacity:.12}
-body.sunlight-mode .topbar{background:#030a13;border-bottom:2px solid #76cfff;backdrop-filter:none}
-body.sunlight-mode .brand h1{background:none;color:#fff;-webkit-text-fill-color:#fff;text-shadow:0 1px 0 #000}
-body.sunlight-mode .pill{background:#061a2a;border:1px solid #8bdcff;color:#f4fbff}
-body.sunlight-mode .card,body.sunlight-mode .hist-card,body.sunlight-mode .kpi{
-  background:#071522;border:1px solid #5b8eae;backdrop-filter:none;box-shadow:0 5px 18px rgba(0,0,0,.45)}
-body.sunlight-mode .card-head h2,body.sunlight-mode .kpi label,body.sunlight-mode .f label,
-body.sunlight-mode .sec-title,body.sunlight-mode thead th,body.sunlight-mode .hist-meta,
-body.sunlight-mode .hist-row,body.sunlight-mode .av-muted,body.sunlight-mode .empty{
-  color:#e4f3ff!important}
-body.sunlight-mode .kpi strong,body.sunlight-mode .hist-meta b{color:#fff}
-body.sunlight-mode .av-input,body.sunlight-mode #agro-modal input{
-  background:#020910;color:#fff;border:2px solid #8bbbd8;min-height:50px;font-size:15px}
-body.sunlight-mode .av-input::placeholder{color:#c0d5e5}
-body.sunlight-mode .btn{min-height:44px;font-size:14px;color:#fff;background:#10263a;border:1.5px solid #91c9e8;box-shadow:0 3px 10px rgba(0,0,0,.35)}
-body.sunlight-mode .btn-sm{min-height:40px;font-size:12.5px}
-body.sunlight-mode .btn-primary{background:linear-gradient(135deg,#5eead4,#22d3ee 48%,#818cf8);color:#00131d;border:2px solid #b9f4ff}
-body.sunlight-mode .btn-lime{background:linear-gradient(135deg,#d9f99d,#84cc16);color:#102000;border:2px solid #efffbe}
-body.sunlight-mode .map-tools button{width:48px;height:48px;background:#031321;color:#fff;border:2px solid #a8e4ff;box-shadow:0 4px 14px #000}
-body.sunlight-mode .map-top .btn,body.sunlight-mode .legend,body.sunlight-mode #detected-panel,
-body.sunlight-mode #map-detail-status{background:#031321;color:#fff;border:1.5px solid #8bdcff;backdrop-filter:none}
-body.sunlight-mode .legend{font-size:12px;color:#f4fbff}
-body.sunlight-mode .det-item{background:#0a2134;color:#fff;border-color:#416d89;font-size:13px}
-body.sunlight-mode .det-item span{color:#e0f2ff}
-body.sunlight-mode .tbl-wrap{border:1.5px solid #638eaa}
-body.sunlight-mode thead th{background:#10283a}
-body.sunlight-mode tbody td{border-bottom-color:#385a70}
-body.sunlight-mode #agro-modal{background:rgba(0,0,0,.88);backdrop-filter:none}
-body.sunlight-mode #agro-modal-panel{background:#061522;border:2px solid #7edcff;box-shadow:0 20px 70px #000}
-body.sunlight-mode .toast{background:#020a12;color:#fff;border:1.5px solid #8bdcff}
-body.sunlight-mode #history-map-banner{background:#020b14;border:2px solid #8bdcff}
 @media(max-width:760px){
   #history-map-banner{left:8px;right:58px;top:58px;padding:7px 8px;gap:7px}
   #history-map-title{font-size:10px}
   #history-map-meta{font-size:9.5px}
   #history-map-back{min-height:36px;font-size:11px;padding:6px 8px}
-  .sun-toggle{font-size:9.5px;padding:5px 8px;min-height:28px}
 }
 
 </style>
@@ -382,7 +344,7 @@ body.sunlight-mode #history-map-banner{background:#020b14;border:2px solid #8bdc
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.10 HISTORIAL VISUAL</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.11 HISTORIAL VISUAL</span></div>
   </aside>
 
   <div class="stage">
@@ -399,8 +361,7 @@ body.sunlight-mode #history-map-banner{background:#020b14;border:2px solid #8bdc
       </div>
       <div class="top-actions">
         <span class="pill"><span class="dot"></span><span id="sync-label">Sesión local</span></span>
-        <button type="button" id="sunlight-toggle" class="pill sun-toggle" aria-pressed="false" title="Activar modo de alto contraste para exteriores"><i class="fa-solid fa-sun"></i><span>Modo sol</span></button>
-        <button type="button" id="install-map" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i><span id="install-map-label">Instalar todos los mapas</span></button>
+<button type="button" id="install-map" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i><span id="install-map-label">Instalar todos los mapas</span></button>
       </div>
     </header>
 
@@ -607,20 +568,7 @@ body.sunlight-mode #history-map-banner{background:#020b14;border:2px solid #8bdc
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const SUNLIGHT_MODE_KEY='agrovalle_modo_sol_v34_10';
-function applySunlightMode(enabled,persist=true){
-  document.body.classList.toggle('sunlight-mode',!!enabled);
-  const button=$('sunlight-toggle');
-  if(button){
-    button.setAttribute('aria-pressed',String(!!enabled));
-    button.title=enabled?'Desactivar alto contraste':'Activar alto contraste para exteriores';
-    button.innerHTML=enabled?'<i class="fa-solid fa-sun"></i><span>Modo sol activo</span>':'<i class="fa-solid fa-sun"></i><span>Modo sol</span>';
-  }
-  if(persist){try{localStorage.setItem(SUNLIGHT_MODE_KEY,enabled?'1':'0');}catch(e){}}
-}
-let sunlightSaved=false;try{sunlightSaved=localStorage.getItem(SUNLIGHT_MODE_KEY)==='1';}catch(e){}
-applySunlightMode(sunlightSaved,false);
-$('sunlight-toggle').addEventListener('click',()=>applySunlightMode(!document.body.classList.contains('sunlight-mode')));
+
 const NS = 'http://www.w3.org/2000/svg';
 const STORE_BASE = 'agrovalle_svg_registros_v1';
 const REPORT_STORE_BASE = 'agrovalle_informe_jornada_v1';
@@ -684,19 +632,22 @@ const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits:
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
 const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
-// Esperar a la activación de V34.10 antes de leer metadatos y recursos de interfaz actualizados.
+// Esperar a la activación de V34.11 antes de leer metadatos y recursos de interfaz actualizados.
+const EXPECTED_SW_VERSION='v34.11';
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
-    const registration=await navigator.serviceWorker.register('./sw.js');
+    const registration=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+    // Solicita comprobar el script publicado, no una copia antigua de caché HTTP.
+    try{await registration.update();}catch(e){}
     const candidate=registration.installing||registration.waiting;
     if(candidate&&!['activated','redundant'].includes(candidate.state)){
       await Promise.race([
         new Promise(resolve=>candidate.addEventListener('statechange',()=>{if(['activated','redundant'].includes(candidate.state))resolve();})),
-        new Promise(resolve=>setTimeout(resolve,12000))
+        new Promise(resolve=>setTimeout(resolve,15000))
       ]);
     }
-    await Promise.race([navigator.serviceWorker.ready,new Promise(resolve=>setTimeout(resolve,4000))]);
+    await Promise.race([navigator.serviceWorker.ready,new Promise(resolve=>setTimeout(resolve,6000))]);
     return registration;
   }catch(e){return null;}
 })();
@@ -1493,7 +1444,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-10-history-visual';
+  const SHELL_VERSION='agrovalle-shell-v34-11-offline-repair';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1795,12 +1746,40 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   const mapCacheNameForId=id=>id==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+id;
   const mapUrlsForConfig=(cfg,manifest)=>[cfg.manifest,...manifest.files];
-  async function hasOfflineShell(){
-    try{const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;const shell=await caches.open(SHELL_VERSION);
-      const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css','./assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico'];
-      return !!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
-    }catch(e){return false;}
+  const OFFLINE_ESSENTIALS=[
+    './index.html','./manifest.webmanifest','./maps/catalog.json',
+    './assets/fontawesome/css/all.min.css',
+    './assets/fontawesome/webfonts/fa-solid-900.woff2',
+    './assets/fontawesome/webfonts/fa-brands-400.woff2',
+    './assets/icon-192.png','./assets/icon-512.png',
+    './assets/favicon-logo.png','./assets/favicon.ico'
+  ];
+  async function getActiveWorkerVersion(worker){
+    if(!worker||typeof MessageChannel==='undefined')return null;
+    return await new Promise(resolve=>{
+      const channel=new MessageChannel();
+      const timer=setTimeout(()=>{try{channel.port1.close();}catch(e){}resolve(null);},1800);
+      channel.port1.onmessage=event=>{clearTimeout(timer);try{channel.port1.close();}catch(e){}resolve(event.data?.version||null);};
+      try{worker.postMessage({type:'AGRO_GET_VERSION'},[channel.port2]);}
+      catch(e){clearTimeout(timer);resolve(null);}
+    });
   }
+  async function inspectOfflineShell(){
+    const result={ok:false,active:false,workerVersion:null,missing:[]};
+    try{
+      const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration():null;
+      result.active=!!reg?.active;
+      if(reg?.active)result.workerVersion=await getActiveWorkerVersion(reg.active);
+      const shell=await caches.open(SHELL_VERSION);
+      for(const path of OFFLINE_ESSENTIALS){
+        const absolute=new URL(path,document.baseURI).href;
+        if(!await shell.match(absolute))result.missing.push(path);
+      }
+      result.ok=result.active&&result.workerVersion===EXPECTED_SW_VERSION&&result.missing.length===0;
+    }catch(e){result.error=e?.message||String(e);}
+    return result;
+  }
+  async function hasOfflineShell(){return (await inspectOfflineShell()).ok;}
   const digestHex=async buffer=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
   async function readMapManifest(cfg){
     const response=await fetch(cfg.manifest);if(!response.ok)throw Error(cfg.manifest+' HTTP '+response.status);
@@ -1961,12 +1940,13 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
           mapInstallMessage(`✓ ${cfg.name} listo (${mapIndex+1}/${mapRegistry.length}). Se continúa con el siguiente mapa…`);
           await delay(40);
         }
-        const reg=('serviceWorker' in navigator)?await navigator.serviceWorker.getRegistration().catch(()=>null):null;
-        const shell=await caches.open(SHELL_VERSION);
-        const essentials=['./index.html','./manifest.webmanifest','./maps/catalog.json','./assets/fontawesome/css/all.min.css',
-          './assets/fontawesome/webfonts/fa-solid-900.woff2','./assets/fontawesome/webfonts/fa-brands-400.woff2','./assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico'];
-        const hasShell=!!reg?.active&&(await Promise.all(essentials.map(u=>shell.match(u)))).every(Boolean);
-        if(!hasShell)throw Error('Los mapas están guardados, pero faltan recursos esenciales de la aplicación offline. Reabre con internet para verificar el Service Worker.');
+        const shellAudit=await inspectOfflineShell();
+        if(!shellAudit.ok){
+          if(!shellAudit.active)throw Error('El Service Worker V34.11 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
+          if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
+          throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));
+        }
         installLabel.textContent='Todos los mapas instalados ✓';mapInstallMessage('');
         return true;
       }catch(err){

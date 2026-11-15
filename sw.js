@@ -1,7 +1,7 @@
-/* GESTION AGRICOLA V34.12: reparación offline y eliminación de Modo sol.
+/* GESTION AGRICOLA V34.13 · HIGH CONTRAST: reparación offline y eliminación de Modo sol.
    Conserva las cachés cartográficas existentes y valida la versión activa del SW. */
-const SW_VERSION='v34.12';
-const SHELL='agrovalle-shell-v34-12-cyber-executive';
+const SW_VERSION='v34.13';
+const SHELL='agrovalle-shell-v34-13-high-contrast';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './index.html','./manifest.webmanifest','./maps/catalog.json',

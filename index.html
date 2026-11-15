@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.11 Historial visual</title>
+<title>GESTION AGRICOLA · V34.12 Historial visual</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
@@ -309,7 +309,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 }
 #audit-notice[hidden],#rep-date-override[hidden]{display:none!important}
 
-/* V34.11: vista histórica del mapa */
+/* V34.12: vista histórica del mapa */
 #history-map-banner{position:absolute;left:12px;right:64px;top:60px;z-index:24;
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   padding:9px 11px;border:1px solid rgba(34,211,238,.75);border-radius:13px;
@@ -329,6 +329,402 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
   #history-map-back{min-height:36px;font-size:11px;padding:6px 8px}
 }
 
+
+/* ==========================================================
+   V34.12 · CYBER-EXECUTIVE AGROVALLE
+   Capa visual: no modifica geometrías, catálogos ni hectáreas.
+   ========================================================== */
+:root{
+  --bg:#02050a;
+  --panel:#0b1422;
+  --line:rgba(56,189,248,.18);
+  --txt:#f2f7fc;
+  --muted:#a9bfd3;
+  --cyan:#22d3ee;
+  --violet:#a78bfa;
+  --lime:#a3e635;
+  --emerald:#10b981;
+  --amber:#f5c76a;
+  --red:#fb7185;
+}
+body{
+  background:
+    radial-gradient(ellipse at 12% -12%,rgba(8,145,178,.10),transparent 42%),
+    radial-gradient(ellipse at 95% 10%,rgba(16,185,129,.06),transparent 35%),
+    var(--bg);
+  color:var(--txt);
+}
+.aurora{opacity:.28;filter:blur(105px)}
+.grid-bg{
+  opacity:.24;
+  background-image:
+    linear-gradient(rgba(56,189,248,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,189,248,.035) 1px,transparent 1px);
+  background-size:56px 56px;
+}
+.topbar{
+  background:linear-gradient(180deg,rgba(7,15,27,.96),rgba(3,8,15,.86));
+  border-bottom-color:rgba(56,189,248,.2);
+  box-shadow:0 8px 28px -22px rgba(34,211,238,.45);
+}
+.brand h1{
+  background:linear-gradient(100deg,#f1f5f9 0%,#b9e8fa 52%,#8be9d0 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:.045em;
+}
+.brand p{color:#7791a8;letter-spacing:.19em}
+.rail{
+  background:linear-gradient(180deg,rgba(9,18,32,.97),rgba(3,8,15,.96));
+  border-right-color:rgba(56,189,248,.17);
+}
+.card{
+  background:linear-gradient(158deg,rgba(13,22,38,.88),rgba(5,10,18,.96));
+  border:1px solid rgba(56,189,248,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 40px -15px rgba(0,0,0,.7);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.card-head h2,.sec-title{
+  color:#c8d9e8;
+  letter-spacing:.105em;
+}
+.card-head h2{
+  background:linear-gradient(100deg,#edf7ff,#9bdcf2 75%,#9de8d2);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.kpi{
+  background:linear-gradient(158deg,rgba(13,22,38,.91),rgba(5,10,18,.96));
+  border-color:rgba(56,189,248,.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 14px 30px -22px rgba(0,0,0,.9);
+}
+.kpi label{color:#8ca8bf;letter-spacing:.13em}
+.kpi strong,.hist-meta b,.num,.hist-value,#hs-jornadas,#hs-cuarteles,#hs-ha{
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+}
+.kpi strong{
+  color:#f3f8fd;
+  letter-spacing:-.025em;
+  text-shadow:0 0 22px rgba(34,211,238,.08);
+}
+.kpi.c2 strong{color:#8ce8c1}
+.kpi.c4 strong{color:#f4d18b}
+.kpi.c2::after{background:var(--emerald)}
+.kpi.c4::after{background:var(--amber)}
+.pill{
+  border-color:rgba(56,189,248,.22);
+  background:rgba(8,24,38,.78);
+  color:#b9e6f3;
+}
+.btn,.av-tab,.map-tools button,.quick button,.det-item,.av-input,.pill,
+button,[role="button"]{
+  transition-property:transform,color,background-color,border-color,box-shadow,opacity,filter;
+  transition-duration:.2s;
+  transition-timing-function:cubic-bezier(.4,0,.2,1);
+}
+.btn{
+  border-color:rgba(125,160,190,.24);
+  background:linear-gradient(155deg,rgba(24,39,58,.9),rgba(11,20,33,.94));
+  color:#e1edf7;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.btn:hover{
+  border-color:rgba(56,189,248,.42);
+  background:linear-gradient(155deg,rgba(29,52,73,.96),rgba(12,25,41,.98));
+  box-shadow:0 8px 20px -15px rgba(34,211,238,.5);
+  transform:translateY(-1px);
+}
+.btn-primary{
+  border-color:rgba(34,211,238,.62);
+  background:linear-gradient(112deg,#34d399 0%,#22d3ee 48%,#818cf8 100%);
+  color:#03121a;
+  box-shadow:0 10px 28px -12px rgba(34,211,238,.62),inset 0 1px 0 rgba(255,255,255,.38);
+}
+.btn-primary:hover{
+  filter:brightness(1.07) saturate(1.04);
+  transform:translateY(-2px);
+  box-shadow:0 12px 30px -10px rgba(34,211,238,.4),0 0 0 1px rgba(34,211,238,.16);
+}
+.btn-lime{
+  background:linear-gradient(112deg,#a3e635,#34d399);
+  border-color:rgba(163,230,53,.6);
+  box-shadow:0 10px 26px -13px rgba(16,185,129,.62),inset 0 1px 0 rgba(255,255,255,.35);
+}
+.btn:focus-visible,.av-tab:focus-visible,.map-tools button:focus-visible,
+.quick button:focus-visible,.av-input:focus-visible{
+  outline:2px solid rgba(34,211,238,.9);
+  outline-offset:3px;
+}
+.av-input{
+  background:linear-gradient(160deg,rgba(3,10,18,.96),rgba(7,16,27,.96));
+  border-color:rgba(125,160,190,.25);
+}
+.av-input:focus{
+  border-color:rgba(34,211,238,.78);
+  box-shadow:0 0 0 3px rgba(34,211,238,.12),0 0 22px -14px rgba(34,211,238,.65);
+}
+.tbl-wrap{
+  border-color:rgba(56,189,248,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+thead th{
+  color:#9ab8ce;
+  background:linear-gradient(180deg,rgba(17,34,52,.95),rgba(10,22,36,.95));
+  letter-spacing:.13em;
+}
+tbody tr:hover{background:rgba(34,211,238,.065)}
+tfoot td{color:#6ee7b7}
+.chip{
+  color:#9bf1cf;
+  background:rgba(16,185,129,.12);
+  border-color:rgba(52,211,153,.34);
+}
+#map-viewport{
+  background:
+    radial-gradient(ellipse at 50% 42%,rgba(15,34,51,.58),transparent 72%),
+    #030912;
+  border:1px solid rgba(56,189,248,.24);
+  box-shadow:inset 0 0 100px rgba(0,0,0,.76),inset 0 1px 0 rgba(255,255,255,.045),
+    0 16px 42px -24px rgba(34,211,238,.32);
+}
+#svg-container svg{shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+#agro-overlay polygon{
+  transition:fill .18s ease,stroke .18s ease,filter .18s ease;
+}
+#agro-overlay .outline-idle{
+  fill:rgba(245,199,106,.035);
+  stroke:#f5c76a;
+}
+#agro-overlay .outline-draft{
+  fill:rgba(250,204,21,.15);
+  stroke:#facc15;
+  filter:drop-shadow(0 0 2px rgba(250,204,21,.3));
+}
+.estado-completado{
+  fill:rgba(16,185,129,.82)!important;
+  stroke:#eafff6!important;
+  stroke-width:2px!important;
+  filter:drop-shadow(0 0 3px rgba(16,185,129,.5));
+}
+.estado-en-proceso{
+  fill:rgba(245,158,11,.82)!important;
+  stroke:#fff7df!important;
+  stroke-width:2px!important;
+  filter:drop-shadow(0 0 3px rgba(245,158,11,.38));
+}
+.estado-pendiente{
+  fill:rgba(251,113,133,.32)!important;
+  stroke:#fb7185!important;
+  filter:drop-shadow(0 0 2px rgba(251,113,133,.25));
+}
+.map-tools button{
+  background:rgba(5,15,27,.84);
+  border-color:rgba(125,190,220,.26);
+  color:#d1edf8;
+  box-shadow:0 8px 22px -12px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.map-tools button:hover{
+  color:#04121c;background:var(--cyan);border-color:var(--cyan);
+  box-shadow:0 0 20px -8px rgba(34,211,238,.62);
+  transform:translateY(-1px);
+}
+.map-top .btn,.legend,#detected-panel,#map-detail-status{
+  box-shadow:0 10px 26px -18px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.045);
+}
+#detected-panel{
+  background:linear-gradient(160deg,rgba(8,19,32,.97),rgba(3,9,17,.98));
+  border-color:rgba(56,189,248,.22);
+}
+.det-item.done{
+  border-color:rgba(52,211,153,.42);
+  background:linear-gradient(100deg,rgba(16,185,129,.16),rgba(16,185,129,.06));
+  color:#a7f3d0;
+}
+.legend{
+  background:rgba(4,13,23,.88);
+  border-color:rgba(56,189,248,.2);
+  color:#a9c4d6;
+}
+
+/* Historial: lectura por bloques semánticos y valores alineados. */
+.hist-card{
+  background:linear-gradient(158deg,rgba(13,22,38,.91),rgba(5,10,18,.97));
+  border-color:rgba(56,189,248,.19);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 16px 32px -24px rgba(0,0,0,.9);
+}
+.hist-card h3{
+  color:#9debd3;
+  letter-spacing:.015em;
+  line-height:1.35;
+}
+.hist-meta{
+  gap:8px 14px;
+  color:#9ab1c4;
+}
+.hist-meta>span{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 8px;border:1px solid rgba(56,189,248,.13);
+  border-radius:8px;background:rgba(8,24,38,.55);
+}
+.hist-meta>span:first-child b{color:#9fe4f4}
+.hist-meta>span:nth-child(2) b{color:#9de8c5}
+.hist-rows{
+  padding:10px;
+  border:1px solid rgba(56,189,248,.14);
+  border-radius:13px;
+  background:linear-gradient(160deg,rgba(5,13,23,.84),rgba(7,16,27,.9));
+}
+.hist-rows.open{display:block;animation:histReveal .2s ease-out}
+@keyframes histReveal{from{opacity:.65;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.hist-section{
+  display:flex;align-items:center;gap:8px;
+  margin:5px 0 8px!important;
+  padding:7px 9px;
+  border-radius:8px;
+  letter-spacing:.13em;
+}
+.hist-section::before{
+  content:"";width:3px;height:13px;border-radius:3px;background:var(--cyan);
+  box-shadow:0 0 10px rgba(34,211,238,.32);
+}
+.hist-section-meta{
+  color:#8edcf2;
+  background:rgba(34,211,238,.07);
+}
+.hist-section-cuarterles{
+  color:#91e8bf;
+  background:rgba(16,185,129,.075);
+}
+.hist-section-cuarterles::before{
+  background:var(--emerald);box-shadow:0 0 10px rgba(16,185,129,.35);
+}
+.hist-row{
+  display:flex;align-items:flex-start;gap:12px;
+  justify-content:space-between;
+  margin:5px 0;padding:9px 10px;
+  border:1px solid rgba(100,140,175,.11);
+  border-left:2px solid rgba(56,189,248,.48);
+  border-radius:9px;
+  background:rgba(13,27,42,.55);
+  color:#c9dbe8;
+  line-height:1.4;
+}
+.hist-key{
+  flex:0 1 42%;min-width:0;
+  color:#9eb5c8;
+  font-size:11.5px;font-weight:700;
+}
+.hist-value{
+  flex:1 1 58%;min-width:0;
+  max-width:65%;
+  color:#e8f3fb;
+  text-align:right;
+  overflow-wrap:anywhere;
+  font-size:12px;font-weight:750;
+}
+.hist-row-context{border-left-color:#22d3ee;background:rgba(34,211,238,.055)}
+.hist-row-context .hist-key{color:#8bdff0}
+.hist-row-context .hist-value{color:#d4f5fc}
+.hist-row-team{border-left-color:#a78bfa;background:rgba(167,139,250,.055)}
+.hist-row-team .hist-key{color:#c4b5fd}
+.hist-row-team .hist-value{color:#eee8ff}
+.hist-row-operation{border-left-color:#f5c76a;background:rgba(245,199,106,.045)}
+.hist-row-operation .hist-key{color:#f1d49b}
+.hist-row-operation .hist-value{color:#f8e9c9}
+.hist-row-cuartel{border-left-color:#10b981;background:rgba(16,185,129,.045)}
+.hist-row-cuartel .hist-key{color:#9edfc2}
+.hist-row-cuartel .hist-value{color:#c9f5df}
+.hist-row-total{
+  margin-top:11px;padding:12px 11px;
+  border:1px solid rgba(52,211,153,.36);
+  border-left:3px solid #34d399;
+  background:linear-gradient(100deg,rgba(16,185,129,.16),rgba(16,185,129,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 8px 20px -16px rgba(16,185,129,.55);
+}
+.hist-row-total .hist-key{color:#a7f3d0;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.hist-row-total .hist-value{color:#6ee7b7;font-size:15px;font-weight:950}
+.hist-warning{
+  margin:9px 0;padding:10px;border-radius:9px;
+  color:#fecdd3;background:rgba(251,113,133,.09);
+  border:1px solid rgba(251,113,133,.3);
+  line-height:1.45;font-size:11.5px;
+}
+.hist-actions .btn-primary{box-shadow:0 8px 22px -12px rgba(34,211,238,.65)}
+.hist-actions .btn-danger{margin-left:auto}
+
+/* Vista histórica: barra compacta, con el plano siempre como protagonista. */
+#history-map-banner{
+  left:auto;right:62px;top:60px;
+  width:min(440px,calc(100% - 150px));
+  min-height:42px;max-height:58px;
+  padding:6px 8px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:nowrap;gap:8px;
+  border:1px solid rgba(34,211,238,.42);
+  border-radius:11px;
+  background:rgba(2,9,17,.88);
+  color:#f2f8fc;
+  box-shadow:0 8px 22px -14px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.055);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.history-map-copy{
+  flex:1;min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:nowrap;
+}
+.history-map-copy>i{
+  flex:none;color:#67e8f9;font-size:12px;
+}
+.history-map-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+#history-map-title{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:10.5px;font-weight:900;letter-spacing:.055em;color:#e3f8ff;
+}
+#history-map-meta{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:9.5px;line-height:1.2;color:#a8c9d8;font-weight:700;
+}
+#history-map-back{
+  flex:none;min-height:30px;padding:5px 8px;gap:5px;
+  border-radius:8px;background:rgba(14,38,55,.94);
+  border-color:rgba(125,211,252,.32);color:#d8f4fc;font-size:10px;
+}
+#history-map-back:hover{background:rgba(34,211,238,.17);border-color:#22d3ee;color:#fff}
+#history-map-banner .btn{white-space:nowrap}
+@media(max-width:760px){
+  .card{backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+  .grid-bg{opacity:.18;background-size:48px 48px}
+  .topbar{box-shadow:0 6px 18px -16px rgba(34,211,238,.4)}
+  #history-map-banner{
+    left:8px;right:58px;top:58px;width:auto;max-width:none;
+    min-height:40px;max-height:46px;padding:5px 6px;gap:6px;
+    border-radius:10px;
+  }
+  .history-map-copy{gap:6px}
+  #history-map-title{font-size:9.5px}
+  #history-map-meta{font-size:8.5px}
+  #history-map-back{
+    width:31px;height:31px;min-height:31px;padding:0;
+    justify-content:center;border-radius:8px;
+  }
+  #history-map-back span{display:none}
+  .hist-rows{padding:8px}
+  .hist-row{padding:8px;gap:8px}
+  .hist-key{font-size:10.5px;flex-basis:39%}
+  .hist-value{font-size:11.5px;max-width:61%}
+  .hist-row-total .hist-value{font-size:14px}
+  .hist-actions .btn-danger{margin-left:0}
+}
+@media(max-width:380px){
+  #history-map-banner{left:6px;right:54px;top:56px;padding:4px 5px}
+  #history-map-title{font-size:9px}
+  #history-map-meta{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hist-rows.open{animation:none}
+}
+
 </style>
 </head>
 <body>
@@ -344,7 +740,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.11 HISTORIAL VISUAL</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.12 HISTORIAL VISUAL</span></div>
   </aside>
 
   <div class="stage">
@@ -473,8 +869,8 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 
         <div id="map-detail-status" role="status" aria-live="polite"></div>
         <div id="history-map-banner" role="status" aria-live="polite" hidden>
-          <div class="history-map-copy"><i class="fa-solid fa-clock-rotate-left"></i><span id="history-map-title">VISTA HISTÓRICA</span><small id="history-map-meta"></small></div>
-          <button type="button" id="history-map-back" class="btn btn-sm"><i class="fa-solid fa-arrow-left"></i>Volver al historial</button>
+          <div class="history-map-copy"><i class="fa-solid fa-clock-rotate-left"></i><div class="history-map-text"><span id="history-map-title">VISTA HISTÓRICA</span><small id="history-map-meta"></small></div></div>
+          <button type="button" id="history-map-back" class="btn btn-sm" aria-label="Volver al historial" title="Volver al historial"><i class="fa-solid fa-arrow-left"></i><span>Historial</span></button>
         </div>
         <div class="map-top">
           <span id="active-map-chip" class="pill" style="background:rgba(9,18,30,.92);backdrop-filter:blur(10px)">Proyecto 2026</span>
@@ -632,8 +1028,8 @@ const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits:
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
 const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
-// Esperar a la activación de V34.11 antes de leer metadatos y recursos de interfaz actualizados.
-const EXPECTED_SW_VERSION='v34.11';
+// Esperar a la activación de V34.12 antes de leer metadatos y recursos de interfaz actualizados.
+const EXPECTED_SW_VERSION='v34.12';
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
@@ -1444,7 +1840,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-11-offline-repair';
+  const SHELL_VERSION='agrovalle-shell-v34-12-cyber-executive';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -1942,7 +2338,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
         }
         const shellAudit=await inspectOfflineShell();
         if(!shellAudit.ok){
-          if(!shellAudit.active)throw Error('El Service Worker V34.11 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          if(!shellAudit.active)throw Error('El Service Worker V34.12 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
           if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
           if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
           throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));
@@ -2426,11 +2822,18 @@ function filteredGroups(){
 
 function historyDetail(label, value) {
   const item = document.createElement('div');
+  const normalized = String(label || '').trim().toLocaleLowerCase();
   item.className = 'hist-row';
+  if (normalized === 'total aplicado') item.classList.add('hist-row-total');
+  else if (['fecha','mapa de registro'].includes(normalized)) item.classList.add('hist-row-context');
+  else if (['empresa','contratista','supervisor'].includes(normalized)) item.classList.add('hist-row-team');
+  else if (['sector','predio','personal','mezcla utilizada'].includes(normalized)) item.classList.add('hist-row-operation');
+  else item.classList.add('hist-row-cuartel');
   const key = document.createElement('span');
-  key.style.color = '#8ba1b8'; key.textContent = label;
+  key.className = 'hist-key';
+  key.textContent = label;
   const val = document.createElement('span');
-  val.style.cssText = 'text-align:right;max-width:65%;overflow-wrap:anywhere';
+  val.className = 'hist-value';
   val.textContent = value == null || value === '' ? '—' : String(value);
   item.append(key, val);
   return item;
@@ -2710,23 +3113,23 @@ async function renderHistory(){
 
     const details=document.createElement('div');details.className='hist-rows';
     if(j){
-      const section=document.createElement('p');section.className='sec-title';section.style.marginTop='12px';section.textContent='Datos de la jornada';details.append(section);
+      const section=document.createElement('p');section.className='sec-title hist-section hist-section-meta';section.style.marginTop='12px';section.textContent='Datos de la jornada';details.append(section);
       for(const [label,value] of [
         ['Fecha',date==='Sin fecha'?'—':date.split('-').reverse().join('-')],['Mapa de registro',j.mapName||entry.mapName||mapNameForId(mapId)],
         ['Empresa',j.company],['Contratista',j.contractor],['Supervisor',j.supervisor],['Sector',j.sector],['Predio',j.farm],
         ['Personal',j.people==null?'—':j.people+' personas'],['Mezcla utilizada',j.mixture]
       ])details.append(historyDetail(label,value));
     }else{const note=document.createElement('p');note.className='av-muted';note.textContent='Los datos generales aún no se han guardado para esta fecha.';details.append(note);}
-    const heading=document.createElement('p');heading.className='sec-title';heading.style.marginTop='15px';heading.textContent='Cuarteles y hectáreas';details.append(heading);
+    const heading=document.createElement('p');heading.className='sec-title hist-section hist-section-cuarterles';heading.style.marginTop='15px';heading.textContent='Cuarteles y hectáreas';details.append(heading);
     if(!rows.length)details.append(historyDetail('Cuarteles','Sin cuarteles registrados'));
     for(const r of rows){
       const label=snapshot?historyDisplayName(r,snapshot,mapId):(r.name||'Cuartel');
       const value=snapshot?historyAreaBreakdown(r,snapshot,mapId):(fmt(r.ha)+' ha');
       details.append(historyDetail(label,value+(r.correcciones?.length?' · RECTIFICADO':'')));
     }
-    if(errors.length){const warning=document.createElement('p');warning.style.cssText='color:#fb7185;font-weight:800';warning.textContent='⚠ PENDIENTE DE AUDITORÍA: '+errors.slice(0,3).map(p=>p.name+' '+p.reason).join(' | ');details.append(warning);}
+    if(errors.length){const warning=document.createElement('p');warning.className='hist-warning';warning.style.cssText='font-weight:800';warning.textContent='⚠ PENDIENTE DE AUDITORÍA: '+errors.slice(0,3).map(p=>p.name+' '+p.reason).join(' | ');details.append(warning);}
     const total=historyDetail('TOTAL APLICADO',errors.length?'NO VALIDADO':fmt(sum)+' ha');
-    total.style.cssText='font-weight:900;color:#34d399;border-top:1px solid rgba(52,211,153,.35);margin-top:8px';details.append(total);card.append(details);
+    details.append(total);card.append(details);
 
     const actions=document.createElement('div');actions.className='hist-actions';
     const toggle=document.createElement('button');toggle.className='btn btn-sm';toggle.innerHTML='<i class="fa-solid fa-list"></i>Ver jornada completa';toggle.setAttribute('aria-expanded','false');

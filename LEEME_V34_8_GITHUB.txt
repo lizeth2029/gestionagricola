@@ -1,0 +1,37 @@
+GESTION AGRICOLA V34.8 — INSTRUCCIONES PARA GITHUB
+
+ARCHIVOS
+- GESTION_AGRICOLA_V34_8_GITHUB_ACTUALIZACION.zip: actualización para un repositorio que ya contiene V34.7.
+- GESTION_AGRICOLA_V34_8_COMPLETO_iPhone_Android.zip: proyecto completo con Proyecto 2026 y los tres mapas nuevos.
+
+ACTUALIZAR UN REPOSITORIO EXISTENTE
+1. Descarga y descomprime GESTION_AGRICOLA_V34_8_GITHUB_ACTUALIZACION.zip.
+2. En GitHub, abre el repositorio de la aplicación.
+3. Sube el contenido descomprimido respetando las carpetas y rutas.
+4. Acepta reemplazar index.html, sw.js y manifest.webmanifest.
+5. Agrega la carpeta maps/ completa, fuentes_v34_8/, los CSV de auditoría y los archivos README.
+6. NO elimines ni reemplaces las carpetas actuales assets/ y map-svg/. map-svg/ contiene Proyecto 2026 y sus recursos históricos.
+7. Haz commit y espera que GitHub Pages termine el despliegue.
+8. Abre la aplicación por HTTPS y recarga. Si Safari conserva la versión anterior, cierra la pestaña y vuelve a abrir el sitio.
+
+PRIMER USO
+1. En Datos de la jornada, selecciona el mapa que usarás.
+2. Entra al mapa con conexión a internet.
+3. Pulsa Instalar mapa y espera a que la aplicación confirme la instalación.
+4. Repite la instalación para cada sector que se usará sin señal. Cada sector tiene un caché offline independiente.
+5. Comprueba el nombre del mapa activo antes de registrar.
+
+PROTECCIÓN DE DATOS
+- Proyecto 2026 conserva sus registros históricos.
+- Cada mapa nuevo tiene almacenamiento, informe e historial independientes.
+- No se cruzan cuarteles ni hectáreas entre mapas.
+- Los cuarteles pendientes de validación no permiten registrar.
+- No asignar manualmente las 13 etiquetas de superficie sin código ni los 11 códigos bloqueados sin revisar el SVG y la auditoría.
+
+AUDITORÍA
+- AUDITORIA_MULTI_MAPA_V34_8.csv: asociaciones y distancias de todos los cuarteles.
+- PENDIENTES_VALIDACION_V34_8.csv: 11 códigos bloqueados y 13 etiquetas de superficie sin código.
+- fuentes_v34_8/: fuentes originales y SVG limpio de PALTOS SECTOR 7.
+
+IMPORTANTE
+La actualización está validada estructuralmente y con comprobaciones SHA-256 de catálogos, etiquetas, manifests y teselas. Antes de comenzar una jornada real, realiza una prueba de selección y registro en cada sector desde un iPhone y un Android con la versión publicada.

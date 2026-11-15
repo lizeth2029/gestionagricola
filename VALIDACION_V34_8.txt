@@ -1,0 +1,40 @@
+VALIDACION DE ENTREGA — GESTION AGRICOLA V34.8
+Fecha de preparación: 15-11-2026
+
+RESULTADO: VALIDACIÓN ESTRUCTURAL COMPLETADA
+
+1. APLICACIÓN
+- Sintaxis JavaScript de index.html: OK.
+- Sintaxis JavaScript de sw.js: OK.
+- IDs HTML duplicados: 0.
+- Selector multi-mapa y referencias de configuración presentes.
+- Versión de caché shell V34.8 consistente entre index.html y sw.js.
+
+2. INTEGRIDAD CARTOGRÁFICA
+- Huella SHA-256 del catálogo general: comprobada.
+- Huellas SHA-256 de los manifests, catálogos y etiquetas: comprobadas.
+- Huellas SHA-256 de todos los recursos de los tres bundles nuevos: comprobadas.
+- Archivos declarados en cada manifest: todos existen.
+- Cada mapa nuevo contiene 12 teselas vectoriales SVG y 35 teselas fotográficas JPEG.
+- Teselas fotográficas: 1024 × 1024 píxeles (2×).
+- Teselas vectoriales: 1024 unidades de mapa por tesela.
+
+3. AUDITORÍA DE CUARTELES
+- PALTOS CASETA 2 Y 3: 620 habilitados, 5 bloqueados, 6 superficies sin código.
+- PALTOS SECTOR 7: 273 habilitados, 0 bloqueados, 0 superficies sin código.
+- PALTOS SECTOR 8: 307 habilitados, 6 bloqueados, 7 superficies sin código.
+- Total mapas nuevos: 1.200 habilitados, 11 bloqueados y 13 superficies no asignadas.
+- Los pendientes no se habilitan para registro.
+
+4. LIMPIEZA SECTOR 7
+- Retirada la capa 0 Agua que contenía los trazos azules superpuestos.
+- Retirados los trazos de marcadores azules y rosados.
+- Conservadas las etiquetas azules de identificación de cuarteles.
+- La fuente limpia conserva 208 etiquetas de texto azules y no contiene trazos de marcador azul/rosado objetivo.
+
+5. PAQUETES
+- ZIP de actualización GitHub: prueba de integridad ZIP OK.
+- ZIP completo iPhone/Android: prueba de integridad ZIP OK.
+
+LIMITACIÓN DE PRUEBA
+La validación realizada es estructural, de archivos, hashes, datos y sintaxis. No sustituye una prueba funcional final en un iPhone 13 y un Android físicos después de publicar en GitHub Pages/HTTPS. Se recomienda comprobar selección, zoom, registro de un cuartel conocido e instalación offline de cada mapa antes de iniciar trabajo real.

@@ -1,5 +1,5 @@
 {
-  "name": "GESTION AGRICOLA · Mapa SVG Offline",
+  "name": "GESTION AGRICOLA · Registro Multi-mapa Offline",
   "short_name": "GESTION AGRICOLA",
   "start_url": "./",
   "scope": "./",
@@ -7,15 +7,7 @@
   "background_color": "#04080f",
   "theme_color": "#04080f",
   "icons": [
-    {
-      "src": "assets/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "assets/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    {"src":"assets/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"assets/icon-512.png","sizes":"512x512","type":"image/png"}
   ]
 }

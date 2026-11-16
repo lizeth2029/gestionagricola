@@ -1,0 +1,22 @@
+VALIDACIÓN DE ENTREGA — GESTIÓN AGRÍCOLA V34.14
+
+[OK] Sintaxis JavaScript inline de index.html.
+[OK] Sintaxis de sw.js.
+[OK] CSS parseado sin errores.
+[OK] HTML parseado sin errores por HTMLParser.
+[OK] EXPECTED_SW_VERSION y SW_VERSION coinciden en v34.14.
+[OK] SHELL_VERSION y SHELL coinciden.
+[OK] Los 24 recursos CORE del Service Worker existen en el paquete.
+[OK] Los recursos heredados de V34.13 no modificados conservan sus hashes.
+[OK] C-25: ID auto_C-25, 3,05 ha, asociación ASOCIACION_UNICA en catálogo Proyecto 2026.
+[OK] Prueba matemática de toScreen/fromScreen: error numérico < 1e-9.
+[OK] Prueba matemática de zoom anclado: PASS.
+[OK] Prueba matemática de pinch + rotate anclado: PASS.
+[OK] Rotación acumulativa permite más de 360° sin discontinuidad angular entre eventos.
+[OK] Las cuatro esquinas visibles del visor determinan los sectores SVG a cargar después de rotar.
+[OK] No se modifican catálogos, IDs, hectáreas, geometrías ni cachés cartográficas.
+[PENDIENTE] Prueba física en iPhone 13 / Safari.
+[PENDIENTE] Prueba física en Android.
+[PENDIENTE] Prueba post-despliegue de informe, WhatsApp y guardado.
+
+La validación anterior es estática, matemática y de integridad de archivos. No se afirma haber ejecutado pruebas físicas en dispositivos.

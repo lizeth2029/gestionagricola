@@ -1,0 +1,29 @@
+GESTIÓN AGRÍCOLA V34.14 — ACTUALIZACIÓN GITHUB
+
+ANTES DE PUBLICAR
+1. Exporta un respaldo JSON de las jornadas.
+2. Descomprime este ZIP en la RAÍZ del repositorio GitHub.
+3. Reemplaza index.html, sw.js y manifest.webmanifest.
+4. NO elimines carpetas maps/, map-svg/, assets/, fuentes, SVG, fotos ni catálogos.
+5. No borres los datos del navegador ni las cachés cartográficas.
+
+PUBLICACIÓN
+6. Haz commit y push.
+7. Espera el despliegue de Cloudflare Pages.
+8. Abre la aplicación con internet y recarga una vez.
+9. El Service Worker debe responder v34.14.
+
+PRUEBAS FUNCIONALES
+10. En Panel, revisa que el informe distinga registros de otras fechas y muestre accesos rápidos.
+11. Selecciona la fecha que contiene los cuarteles y prueba Vista previa / WhatsApp / Guardar Jornada.
+12. Confirma que los errores reales de superficies continúan bloqueando y muestran el detalle exacto.
+13. En el mapa, revisa el tamaño uniforme de los tractores.
+14. En el mapa, usa dos dedos para pellizcar y girar 360°; comprueba que puedes seleccionar cuarteles después de girar.
+15. Pulsa Restablecer vista para volver a la orientación original.
+
+IMPORTANTE
+- C-25 permanece con el ID auto_C-25 y 3,05 ha del catálogo oficial.
+- No se modifican superficies ni geometrías.
+- No se desactiva la auditoría.
+- No es necesario reinstalar los mapas ni borrar almacenamiento.
+- La validación en dispositivos físicos debe completarse después del despliegue.

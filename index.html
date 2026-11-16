@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTION AGRICOLA · V34.13 Historial visual</title>
+<title>GESTIÓN AGRÍCOLA · V34.14 Precisión y rotación</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
@@ -161,12 +161,12 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
   border-radius:999px;border:1px solid rgba(52,211,153,.35);color:#6ee7b7;background:rgba(52,211,153,.12)}
 
 /* mapa */
-#map-viewport{position:relative;flex:1;min-height:0;width:100%;overflow:hidden;border-radius:18px;
+#map-viewport{position:relative;flex:1;min-height:0;width:100%;overflow:hidden;border-radius:18px;touch-action:none;
   background:radial-gradient(circle at 50% 40%,#0d1c2b,#050b13 70%);
   border:1px solid var(--line);box-shadow:inset 0 0 90px rgba(2,6,14,.9),0 0 40px -18px rgba(34,211,238,.4)}
 #svg-container{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
 #svg-container:active{cursor:grabbing}
-#svg-container svg{overflow:visible;transform-origin:center center;max-width:100%;max-height:100%}
+#svg-container svg{overflow:visible;transform-box:border-box;transform-origin:50% 50%;max-width:100%;max-height:100%}
 #svg-container svg *{-webkit-tap-highlight-color:transparent}
 #map-detail-status{position:absolute;right:10px;top:10px;z-index:19;max-width:55%;
   padding:6px 9px;border-radius:10px;background:rgba(5,15,26,.9);color:#dbeafe;
@@ -331,7 +331,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 
 
 /* ==========================================================
-   V34.13 · CYBER-EXECUTIVE AGROVALLE
+   V34.14 · CYBER-EXECUTIVE AGROVALLE
    Capa visual: no modifica geometrías, catálogos ni hectáreas.
    ========================================================== */
 :root{
@@ -727,7 +727,7 @@ tfoot td{color:#6ee7b7}
 
 
 /* ==========================================================
-   V34.13 · HIGH-CONTRAST CYBER-AGTECH AGROVALLE
+   V34.14 · HIGH-CONTRAST CYBER-AGTECH AGROVALLE
    Port visual del prototipo aprobado. Conserva la lógica,
    catálogos, registros y geometrías SVG de producción.
    ========================================================== */
@@ -1007,6 +1007,13 @@ input[type="date"]{color-scheme:dark}
 }
 #rep-total{color:#00ff66!important}
 #rep-message{color:#fbbf24!important}
+#rep-message.report-error{display:block;padding:10px 12px;border:1px solid rgba(248,113,133,.42);
+  border-radius:11px;background:rgba(127,29,29,.18);color:#fecdd3!important;font-weight:700;line-height:1.5}
+#rep-message.report-ok{display:block;padding:9px 12px;border:1px solid rgba(52,211,153,.35);
+  border-radius:11px;background:rgba(16,185,129,.1);color:#a7f3d0!important}
+.date-suggestions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.date-suggestions .btn{font-size:11px;padding:7px 10px}
+
 .rep-action-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}
 .rep-action-row .btn{width:100%;min-height:44px;padding:10px 8px}
 #av-go-map{min-height:58px;font-size:15px;font-weight:950;letter-spacing:.015em}
@@ -1362,7 +1369,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i><span>Historial</span></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.13 HISTORIAL VISUAL</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.14 PRECISIÓN + ROTACIÓN</span></div>
   </aside>
 
   <div class="stage">
@@ -1464,6 +1471,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
           <span id="registered-count" class="chip" style="margin-left:auto">0 registrados</span>
         </div>
         <div class="card-body" style="padding-top:12px">
+          <p class="av-muted" style="margin:0 0 9px;font-size:11px">La tabla muestra todos los registros activos del mapa, de cualquier fecha. El informe superior incluye únicamente la fecha de jornada seleccionada.</p>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Cuartel</th><th class="num">Hectáreas</th><th style="text-align:right">Acción</th></tr></thead>
@@ -1517,13 +1525,13 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
         <div class="legend">
           <span><i class="fa-solid fa-circle" style="color:#34d399"></i>Registrado</span>
           <span><i class="fa-solid fa-circle" style="color:#fbbf24"></i>Disponible</span>
-          <span id="map-legend-hint"><i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código del cuartel</span>
+          <span id="map-legend-hint"><i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código · gira con dos dedos</span>
         </div>
 
         <div class="map-tools">
           <button id="btn-zoom-in" aria-label="Acercar"><i class="fa-solid fa-plus"></i></button>
           <button id="btn-zoom-out" aria-label="Alejar"><i class="fa-solid fa-minus"></i></button>
-          <button id="btn-zoom-reset" aria-label="Restablecer vista"><i class="fa-solid fa-crosshairs"></i></button>
+          <button id="btn-zoom-reset" aria-label="Restablecer zoom y orientación" title="Restablecer zoom y orientación"><i class="fa-solid fa-crosshairs"></i></button>
         </div>
       </div>
     </main>
@@ -1647,16 +1655,18 @@ function toast(msg, kind) {
 
 let data = readStoredMapData();
 
-let svg = null, detected = [], modalId = null, zoom = 1, panX = 0, panY = 0;
+let svg = null, detected = [], modalId = null, zoom = 1, panX = 0, panY = 0, rotation = 0;
 let pointers = new Map(), gesture = null, suppressClick = false, frame = 0;
+const rotateVector=(x,y,a)=>({x:x*Math.cos(a)-y*Math.sin(a),y:x*Math.sin(a)+y*Math.cos(a)});
+const angleDelta=(a,b)=>{let d=a-b;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return d;};
 let fullHistory = false, modalHistory = false;
 const historyTag = 'agroValleNavigationV32';
 const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
 const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
-// Esperar a la activación de V34.13 antes de leer metadatos y recursos de interfaz actualizados.
-const EXPECTED_SW_VERSION='v34.13';
+// Esperar a la activación de V34.14 antes de leer metadatos y recursos de interfaz actualizados.
+const EXPECTED_SW_VERSION='v34.14';
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
@@ -2062,7 +2072,7 @@ let historicalMapView = null; // Vista cartográfica histórica: sólo muestra l
 function clearHistoricalMapView(){
   historicalMapView=null;
   const banner=$('history-map-banner');if(banner)banner.hidden=true;
-  const hint=$('map-legend-hint');if(hint)hint.innerHTML='<i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código del cuartel';
+  const hint=$('map-legend-hint');if(hint)hint.innerHTML='<i class="fa-solid fa-hand-pointer" style="color:#22d3ee"></i>Toca el código · gira con dos dedos';
   markerBounds.clear();markerScreenBounds.clear();
   if(mapReady&&svg){drawFlags();renderDetectedList();}
 }
@@ -2103,7 +2113,8 @@ function table() {
     tr.append(td); body.append(tr);
   }
   $('registro-total').textContent = auditRows(Object.values(data.registros)).length?'REVISAR':fmt(total);
-  $('registered-count').textContent = Object.keys(data.registros).length + ' registrados';
+  $('registered-count').textContent = Object.keys(data.registros).length + ' en total';
+  $('registered-count').title='Registros activos de todas las fechas. El informe usa solo la fecha seleccionada.';
   renderReportRows(); refreshKPIs(); renderDetectedList();
   if (!$('av-history').hidden) renderHistory();
   updateAuditNotice();
@@ -2324,7 +2335,7 @@ buildSprayerBitmap();
 
 function placeMarkers() {
   if (!svg || !svg.isConnected) return;
-  const rect = viewport.getBoundingClientRect();
+  const rect = markerOverlay.getBoundingClientRect();
   const ratio = Math.min(window.devicePixelRatio || 1, 2.0);
   const w = Math.max(1, Math.round(rect.width * ratio)), h = Math.max(1, Math.round(rect.height * ratio));
   if (markerOverlay.width !== w || markerOverlay.height !== h) { markerOverlay.width = w; markerOverlay.height = h; }
@@ -2336,19 +2347,17 @@ function placeMarkers() {
   markerScreenBounds.clear();
   if (!sprayerBitmap) return;
   const m=mapMetrics();if(!m)return;
+  const height=Math.max(23,Math.min(28,rect.width*.062));
+  const width=height*200/250,feetFraction=218/250,gap=4;
+  const lift=rotateVector(0,-(gap+height*feetFraction),rotation);
   for (const [id, pos] of markerBounds) {
-    const labelCenter={x:m.left+pos.labelCenterX*m.scale,y:m.top+pos.labelY*m.scale};
-    const labelTop={x:labelCenter.x,y:m.top+(pos.labelY-pos.labelHeight/2)*m.scale};
-    const labelPx=Math.max(.1,pos.labelHeight*m.scale);
-    const height = Math.min(64, Math.max(1.5, labelPx * 2.55));
-    const width = height * 200 / 250;
-    const x = labelCenter.x - rect.left - width / 2;
-    const feetFraction = 218 / 250;
-    const gap = Math.max(0.5, Math.min(3, labelPx * .13));
-    const y = labelTop.y - rect.top - gap - height * feetFraction;
+    const labelTop=m.toScreen(pos.labelCenterX,pos.labelY-pos.labelHeight/2);
+    const bottomX=labelTop.x+lift.x,bottomY=labelTop.y+lift.y;
+    const x=bottomX-rect.left-width/2;
+    const y=bottomY-rect.top-height*feetFraction;
     if (x > rect.width + 12 || y > rect.height + 12 || x + width < -12 || y + height < -12) continue;
-    ctx.drawImage(sprayerBitmap, x, y, width, height);
-    markerScreenBounds.set(id, { x, y, width, height });
+    ctx.drawImage(sprayerBitmap,x,y,width,height);
+    markerScreenBounds.set(id,{x,y,width,height});
   }
   markerOverlay.style.visibility = 'visible';
 }
@@ -2393,17 +2402,28 @@ function drawFlags() {
 // entre versiones de Safari iOS. Usamos el rectángulo visual efectivo.
 function mapMetrics() {
   if (!svg || !mapManifest) return null;
-  const r=svg.getBoundingClientRect();
+  // Usar el viewport SIN transformar: getBoundingClientRect() del SVG devuelve
+  // una caja envolvente incorrecta cuando el plano está girado.
+  const r=container.getBoundingClientRect();
   const w=Number(mapManifest.width),h=Number(mapManifest.height);
   if (!r.width || !r.height || !w || !h) return null;
   // preserveAspectRatio="xMidYMid meet": respetar las bandas vacías.
-  const scale=Math.min(r.width/w,r.height/h);
-  return {left:r.left+(r.width-w*scale)/2,top:r.top+(r.height-h*scale)/2,
-    scale,width:w,height:h};
+  const baseScale=Math.min(r.width/w,r.height/h);
+  const left=r.left+(r.width-w*baseScale)/2,top=r.top+(r.height-h*baseScale)/2;
+  const centerX=r.left+r.width/2,centerY=r.top+r.height/2;
+  return {left,top,scale:baseScale*zoom,width:w,height:h,centerX,centerY,
+    toScreen(x,y){
+      const q=rotateVector(left+x*baseScale-centerX,top+y*baseScale-centerY,rotation);
+      return {x:centerX+panX+zoom*q.x,y:centerY+panY+zoom*q.y};
+    },
+    fromScreen(x,y){
+      const q=rotateVector((x-centerX-panX)/zoom,(y-centerY-panY)/zoom,-rotation);
+      return {x:(centerX+q.x-left)/baseScale,y:(centerY+q.y-top)/baseScale};
+    }};
 }
 function pointInSvg(x,y) {
   const m=mapMetrics();
-  return m ? {x:(x-m.left)/m.scale,y:(y-m.top)/m.scale} : null;
+  return m ? m.fromScreen(x,y) : null;
 }
 function selectAt(x,y) {
   if(historicalMapView){status.textContent='Vista histórica de solo lectura. Vuelve al historial para salir de esta consulta.';return;}
@@ -2419,7 +2439,7 @@ function selectAt(x,y) {
   }else if(!overviewVectorReady){
     status.textContent='Esperando la capa vectorial; no se permitirá seleccionar sobre una foto sin trazados.';return;
   }
-  const rect=viewport.getBoundingClientRect();
+  const rect=markerOverlay.getBoundingClientRect();
   for(const [id,b] of markerScreenBounds){
     const sx=x-rect.left,sy=y-rect.top;
     if(sx>=b.x-5&&sx<=b.x+b.width+5&&sy>=b.y-5&&sy<=b.y+b.height+5){openModal(id);return;}
@@ -2434,17 +2454,18 @@ function selectAt(x,y) {
   openModal(first.c.id);
 }
 function applyTransform() {
-  frame = 0; if (!svg) return;
-  svg.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
+  frame=0;if(!svg)return;
+  svg.style.transform=`translate(${panX}px,${panY}px) scale(${zoom}) rotate(${rotation}rad)`;
   deferMarkers();scheduleTiles();
 }
-function scheduleTransform() { if (!frame) frame = requestAnimationFrame(applyTransform); }
-function zoomAt(f, x, y) {
-  const r = viewport.getBoundingClientRect(), cx = x - r.left - r.width / 2, cy = y - r.top - r.height / 2;
-  const next = Math.max(.7, Math.min(32, zoom * f)), ratio = next / zoom;
-  panX = cx - (cx - panX) * ratio; panY = cy - (cy - panY) * ratio; zoom = next; scheduleTransform();
+function scheduleTransform(){if(!frame)frame=requestAnimationFrame(applyTransform);}
+function zoomAt(f,x,y){
+  const r=container.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const q=rotateVector((x-cx-panX)/zoom,(y-cy-panY)/zoom,-rotation);
+  const next=Math.max(.7,Math.min(32,zoom*f)),v=rotateVector(q.x,q.y,rotation);
+  panX=x-cx-next*v.x;panY=y-cy-next*v.y;zoom=next;scheduleTransform();
 }
-function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
+function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
 
   /* ---------- V34: geometría SVG nativa por sectores + imagen satelital JPG original ---------- */
   let autoSvgLoaded=false, mapManifest=null, mapExtras=[];
@@ -2467,7 +2488,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-13-high-contrast';
+  const SHELL_VERSION='agrovalle-shell-v34-14-precision-rotation';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -2689,8 +2710,10 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
     const m=mapMetrics();if(!m)return;
     const ratio=m.scale;
     const r=viewport.getBoundingClientRect();
-    const minX=Math.max(0,(r.left-m.left)/ratio),maxX=Math.min(m.width,(r.right-m.left)/ratio);
-    const minY=Math.max(0,(r.top-m.top)/ratio),maxY=Math.min(m.height,(r.bottom-m.top)/ratio);
+    const corners=[m.fromScreen(r.left,r.top),m.fromScreen(r.right,r.top),
+      m.fromScreen(r.right,r.bottom),m.fromScreen(r.left,r.bottom)];
+    const minX=Math.max(0,Math.min(...corners.map(p=>p.x))),maxX=Math.min(m.width,Math.max(...corners.map(p=>p.x)));
+    const minY=Math.max(0,Math.min(...corners.map(p=>p.y))),maxY=Math.min(m.height,Math.max(...corners.map(p=>p.y)));
     function sectorCoords(size,cols,rows){
       const coords=[];
       const x0=Math.max(0,Math.floor(minX/size)),x1=Math.min(cols-1,Math.floor((maxX-0.001)/size));
@@ -2965,7 +2988,7 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
         }
         const shellAudit=await inspectOfflineShell();
         if(!shellAudit.ok){
-          if(!shellAudit.active)throw Error('El Service Worker V34.13 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          if(!shellAudit.active)throw Error('El Service Worker V34.14 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
           if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
           if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
           throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));
@@ -2992,43 +3015,69 @@ function reset() { zoom = 1; panX = panY = 0; scheduleTransform(); }
   $('sync-label').textContent=navigator.onLine?'En línea · local':'Sin señal · local';
 
   /* ---------- gestos ---------- */
-viewport.addEventListener('pointerdown', e => {
-  if ($('agro-modal').classList.contains('show') || e.target.closest('button') || !svg) return;
-  viewport.setPointerCapture(e.pointerId);
-  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
-  if (pointers.size === 1) gesture = { x: e.clientX, y: e.clientY, panX, panY };
-  else { gesture = null; suppressClick = true; }
-});
-viewport.addEventListener('pointermove', e => {
-  if (!pointers.has(e.pointerId) || !svg) return;
-  const old = pointers.get(e.pointerId);
-  pointers.set(e.pointerId, { ...old, x: e.clientX, y: e.clientY });
-  if (pointers.size === 1 && gesture) {
-    const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
-    if (Math.hypot(dx, dy) > 7) suppressClick = true;
-    panX = gesture.panX + dx; panY = gesture.panY + dy; scheduleTransform();
-  } else if (pointers.size === 2) {
-    const v = [...pointers.values()], a = v[0], b = v[1];
-    const oldA = a === pointers.get(e.pointerId) ? old : a, oldB = b === pointers.get(e.pointerId) ? old : b;
-    const before = Math.hypot(oldA.x - oldB.x, oldA.y - oldB.y), after = Math.hypot(a.x - b.x, a.y - b.y);
-    if (before > 0) zoomAt(after / before, (a.x + b.x) / 2, (a.y + b.y) / 2);
-    panX += (e.clientX - old.x) / 2; panY += (e.clientY - old.y) / 2; scheduleTransform();
+viewport.addEventListener('pointerdown',e=>{
+  if($('agro-modal').classList.contains('show')||e.target.closest('button')||!svg||pointers.size>=2)return;
+  try{viewport.setPointerCapture(e.pointerId);}catch(err){}
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});
+  if(pointers.size===1){
+    gesture={mode:'pan',x:e.clientX,y:e.clientY,panX,panY};
+  }else{
+    const v=[...pointers.values()],a=v[0],b=v[1];
+    gesture={mode:'transform',startDistance:Math.max(1,Math.hypot(b.x-a.x,b.y-a.y)),
+      startAngle:Math.atan2(b.y-a.y,b.x-a.x),lastAngle:Math.atan2(b.y-a.y,b.x-a.x),rotationDelta:0,
+      startZoom:zoom,startRotation:rotation,startPanX:panX,startPanY:panY,
+      startMidX:(a.x+b.x)/2,startMidY:(a.y+b.y)/2};
+    suppressClick=true;
   }
 });
-viewport.addEventListener('pointerup', e => {
-  const p = pointers.get(e.pointerId); if (!p) return;
-  const moved = Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 9;
-  if (pointers.size === 1 && !moved && !suppressClick) selectAt(e.clientX, e.clientY);
-  pointers.delete(e.pointerId); gesture = null;
-  if (!pointers.size) setTimeout(() => suppressClick = false, 90);
+viewport.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId)||!svg)return;
+  const old=pointers.get(e.pointerId);
+  pointers.set(e.pointerId,{...old,x:e.clientX,y:e.clientY});
+  if(pointers.size===1&&gesture?.mode==='pan'){
+    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+    if(Math.hypot(dx,dy)>7)suppressClick=true;
+    panX=gesture.panX+dx;panY=gesture.panY+dy;scheduleTransform();
+  }else if(pointers.size===2&&gesture?.mode==='transform'){
+    const v=[...pointers.values()],a=v[0],b=v[1];
+    const distance=Math.max(1,Math.hypot(b.x-a.x,b.y-a.y));
+    const angle=Math.atan2(b.y-a.y,b.x-a.x);
+    // Acumular incrementos angulares: permite giros continuos completos de 360° y más.
+    gesture.rotationDelta+=angleDelta(angle,gesture.lastAngle);gesture.lastAngle=angle;
+    const nextZoom=Math.max(.7,Math.min(32,gesture.startZoom*distance/gesture.startDistance));
+    const nextRotation=gesture.startRotation+gesture.rotationDelta;
+    const r=container.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+    // Mantener el punto cartográfico inicial bajo el punto medio de los dedos.
+    const anchor=rotateVector((gesture.startMidX-cx-gesture.startPanX)/gesture.startZoom,
+      (gesture.startMidY-cy-gesture.startPanY)/gesture.startZoom,-gesture.startRotation);
+    const movedMidX=(a.x+b.x)/2,movedMidY=(a.y+b.y)/2;
+    const projected=rotateVector(anchor.x,anchor.y,nextRotation);
+    zoom=nextZoom;rotation=nextRotation;
+    panX=movedMidX-cx-nextZoom*projected.x;panY=movedMidY-cy-nextZoom*projected.y;
+    suppressClick=true;scheduleTransform();
+  }
 });
-viewport.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); gesture = null; });
+function finishMapPointer(e,cancelled=false){
+  const p=pointers.get(e.pointerId);if(!p)return;
+  const moved=Math.hypot((e.clientX??p.x)-p.sx,(e.clientY??p.y)-p.sy)>9;
+  if(!cancelled&&pointers.size===1&&!moved&&!suppressClick)selectAt(e.clientX,e.clientY);
+  pointers.delete(e.pointerId);
+  if(pointers.size===1){
+    const remaining=[...pointers.values()][0];
+    gesture={mode:'pan',x:remaining.x,y:remaining.y,panX,panY};
+    suppressClick=true;
+  }else if(!pointers.size){
+    gesture=null;setTimeout(()=>{suppressClick=false;},90);
+  }else{gesture=null;suppressClick=true;}
+}
+viewport.addEventListener('pointerup',e=>finishMapPointer(e,false));
+viewport.addEventListener('pointercancel',e=>finishMapPointer(e,true));
 window.addEventListener('resize', () => { scheduleTransform(); deferMarkers(); }, { passive: true });
 viewport.addEventListener('wheel', e => { if (!svg) return; e.preventDefault(); zoomAt(Math.exp(-e.deltaY * .0015), e.clientX, e.clientY); }, { passive: false });
 viewport.addEventListener('dblclick', e => { e.preventDefault(); zoomAt(1.7, e.clientX, e.clientY); });
 
-$('btn-zoom-in').onclick = () => { const r = viewport.getBoundingClientRect(); zoomAt(1.5, r.left + r.width / 2, r.top + r.height / 2); };
-$('btn-zoom-out').onclick = () => { const r = viewport.getBoundingClientRect(); zoomAt(1 / 1.5, r.left + r.width / 2, r.top + r.height / 2); };
+$('btn-zoom-in').onclick = () => { const r = container.getBoundingClientRect(); zoomAt(1.5, r.left + r.width / 2, r.top + r.height / 2); };
+$('btn-zoom-out').onclick = () => { const r = container.getBoundingClientRect(); zoomAt(1 / 1.5, r.left + r.width / 2, r.top + r.height / 2); };
 $('btn-zoom-reset').onclick = reset;
 
 /* ---------- drawer cuarteles ---------- */
@@ -3180,6 +3229,8 @@ function selectWorkDate(date){
   clearHistoricalPanel(false);
   selectedWorkDate=date;
   manualWorkDate=date!==localDay();
+  rep('message').textContent='';rep('message').classList.remove('report-error','report-ok');
+  rep('preview').hidden=true;rep('preview').textContent='';
   rep('date').value=date;
   persistWorkDate();updateWorkDateHint();
   renderReportRows();refreshKPIs();
@@ -3225,7 +3276,7 @@ function loadActiveMapFormState(){
     }else if(draft){localStorage.removeItem(WORK_DATE_STORE);}
   }catch(e){}
   rep('date').value=selectedWorkDate;updateWorkDateHint();toggleCustom();
-  rep('preview').hidden=true;rep('preview').textContent='';rep('message').textContent='';
+  rep('preview').hidden=true;rep('preview').textContent='';rep('message').textContent='';rep('message').classList.remove('report-error','report-ok');
 }
 async function switchActiveMap(nextId,options={}){
   await loadMapRegistry();
@@ -3279,13 +3330,49 @@ toggleCustom();
 const datedRows = () => Object.values(data.registros).filter(r => r.fecha === rep('date').value);
 const undatedRows = () => Object.values(data.registros).filter(r => !r.fecha);
 
+function formatWorkDate(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return String(date||'fecha desconocida');
+  const [y,m,d]=date.split('-');return d+'-'+m+'-'+y;
+}
+function noRowsForDateMessage(date){
+  const all=Object.values(data.registros),groups=new Map();
+  for(const row of all){if(row?.fecha)groups.set(row.fecha,(groups.get(row.fecha)||0)+1);}
+  const other=[...groups.entries()].filter(([d])=>d!==date).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,4);
+  if(!all.length)return 'No hay cuarteles registrados para '+formatWorkDate(date)+'.';
+  const undated=all.filter(row=>!row?.fecha).length;
+  return 'No hay cuarteles para '+formatWorkDate(date)+'. Hay '+all.length+' registros activos en total'+
+    (other.length?'; fechas con registros: '+other.map(([d,n])=>formatWorkDate(d)+' ('+n+')').join(', '):'')+
+    (undated?'; sin fecha de jornada: '+undated:'')+'. Cambia la fecha para preparar el informe correcto.';
+}
 function renderReportRows() {
   const rows = historicalPanel ? historicalPanel.rows : datedRows(), total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
   const host = rep('registers'); host.replaceChildren();
   if (!rows.length) {
     const empty = document.createElement('div');
-    empty.textContent = 'Sin cuarteles registrados en esta fecha.';
+    empty.textContent = 'No hay cuarteles registrados para '+formatWorkDate(rep('date').value)+'.';
     host.append(empty);
+    if(!historicalPanel){
+      const all=Object.values(data.registros);
+      const groups=new Map();
+      for(const row of all){if(!row?.fecha)continue;groups.set(row.fecha,(groups.get(row.fecha)||0)+1);}
+      const other=[...groups.entries()].filter(([date])=>date!==rep('date').value).sort((a,b)=>b[0].localeCompare(a[0]));
+      if(other.length){
+        const hint=document.createElement('p');hint.className='av-muted';hint.style.cssText='margin:7px 0 0;font-size:11.5px';
+        hint.textContent='Hay '+all.length+' registros activos en total, pero pertenecen a otras fechas. Selecciona la fecha correcta para generar el informe.';
+        host.append(hint);
+        const actions=document.createElement('div');actions.className='date-suggestions';
+        for(const [date,count] of other.slice(0,4)){
+          const button=document.createElement('button');button.type='button';button.className='btn btn-sm';
+          button.textContent='Usar '+formatWorkDate(date)+' · '+count+' cuartel'+(count===1?'':'es');
+          button.addEventListener('click',()=>selectWorkDate(date));actions.append(button);
+        }
+        host.append(actions);
+      }else if(all.length){
+        const hint=document.createElement('p');hint.className='av-muted';hint.style.cssText='margin:7px 0 0;font-size:11.5px';
+        hint.textContent='Hay '+all.length+' registros activos, pero no tienen una fecha de jornada válida. No se incluirán automáticamente en el informe.';
+        host.append(hint);
+      }
+    }
   }
   for (const r of rows) {
     const line = document.createElement('div');
@@ -3307,8 +3394,11 @@ function reportText() {
   const date = rep('date').value;
   if (!validWorkDate(date)) throw Error('Selecciona una fecha válida, igual o anterior al día de hoy.');
   const rows = historicalPanel ? historicalPanel.rows : datedRows();
-  if (!rows.length) throw Error('No hay cuarteles registrados en la fecha seleccionada.');
-  const issues=auditRows(rows);if(issues.length)throw Error('Informe BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
+  if (!rows.length) throw Error(noRowsForDateMessage(date));
+  const issues=auditRows(rows);if(issues.length){
+    const detail=issues.slice(0,6).map(p=>p.name+': '+p.reason).join(' | ');
+    throw Error('AUDITORÍA DE SUPERFICIES PENDIENTE: '+detail+(issues.length>6?' | Otros '+(issues.length-6)+' registro(s).':''));
+  }
   const mix = rep('mixture').value === 'other' ? rep('custom').value.trim() : mixtures[rep('mixture').value];
   if (!mix) throw Error('Escribe la mezcla utilizada.');
   const people = Number(rep('people').value);
@@ -3330,8 +3420,13 @@ function reportText() {
   ].join('\n');
 }
 function withReport(callback) {
-  try { rep('message').textContent='';const checked=reportText();callback(checked); }
-  catch (e) { rep('preview').hidden=true;rep('preview').textContent='';rep('message').textContent=e.message;toast('Informe bloqueado: revisa superficies','err'); }
+  try { rep('message').textContent='';rep('message').classList.remove('report-error','report-ok');const checked=reportText();callback(checked); }
+  catch (e) {
+    rep('preview').hidden=true;rep('preview').textContent='';
+    const message=e?.message||'No se pudo preparar el informe.';
+    rep('message').textContent=message;rep('message').classList.add('report-error');
+    toast(message.length>150?message.slice(0,147)+'…':message,'err');
+  }
 }
 rep('preview-btn').onclick = () => withReport(text => { rep('preview').textContent = text; rep('preview').hidden = false; });
 rep('copy-btn').onclick = () => withReport(async text => {
@@ -3361,7 +3456,7 @@ $('rep-save-btn').onclick = () => {
   if (!validWorkDate(date)) { rep('message').textContent = 'Selecciona una fecha válida (no futura).'; toast('Fecha de jornada inválida', 'warn'); return; }
   if (historicalPanel) { rep('message').textContent = 'Estás consultando una jornada archivada. Vuelve al registro activo para guardar otra.'; toast('Jornada histórica: solo consulta', 'warn'); return; }
   const rows = datedRows();
-  if (!rows.length) { rep('message').textContent = 'No hay cuarteles registrados en esta fecha.'; toast('No hay cuarteles en esa fecha', 'warn'); return; }
+  if (!rows.length) { const message=noRowsForDateMessage(date);rep('message').textContent=message;toast(message.length>145?message.slice(0,142)+'…':message,'warn');return; }
   if(!mustBeAudited(rows,'archivar la jornada'))return;
   const store = loadJornadas();
   const total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
@@ -3546,7 +3641,7 @@ function focusHistoricalRows(rows){
   if(!mapReady||!svg||!rows.length)return;
   reset();
   requestAnimationFrame(()=>{
-    const m=mapMetrics(),rect=viewport.getBoundingClientRect();
+    const m=mapMetrics(),rect=container.getBoundingClientRect();
     if(!m||!rect.width||!rect.height)return;
     const pts=rows.map(r=>sourceCatalogById.get(r.cuartelId)).filter(s=>s&&Number.isFinite(+s.x)&&Number.isFinite(+s.y));
     if(!pts.length)return;
@@ -3561,9 +3656,9 @@ function focusHistoricalRows(rows){
     requestAnimationFrame(()=>{
       const z=mapMetrics();if(!z)return;
       const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
-      const screenX=z.left+cx*z.scale,screenY=z.top+cy*z.scale;
-      panX+=rect.left+rect.width/2-screenX;
-      panY+=rect.top+rect.height/2-screenY;
+      const screen=z.toScreen(cx,cy);
+      panX+=rect.left+rect.width/2-screen.x;
+      panY+=rect.top+rect.height/2-screen.y;
       scheduleTransform();
     });
   });

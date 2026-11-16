@@ -1,0 +1,22 @@
+GESTIÓN AGRÍCOLA V34.15 — INCORPORAR PALTOS Y CEREZAS CASETA 1
+
+1. Exporta un respaldo JSON de las jornadas antes de publicar.
+2. Descomprime el ZIP de actualización en la RAÍZ del repositorio GitHub.
+3. Acepta reemplazar index.html, sw.js y maps/catalog.json.
+4. Agrega la carpeta completa maps/paltos-y-cerezas-caseta-1/.
+5. Agrega fuentes_v34_15/PALTOS_Y_CEREZAS_CASETA_1_ORIGINAL.svg (archivo fuente para trazabilidad; no se descarga al teléfono durante la instalación).
+6. Agrega los documentos de soporte incluidos.
+7. NO elimines mapas existentes, map-svg/, assets/, catálogos anteriores ni carpetas de fotos.
+8. Haz commit/push y espera el despliegue de Cloudflare Pages.
+9. Abre la aplicación con internet y recarga hasta que el Service Worker indique v34.15.
+10. En el mapa, selecciona «PALTOS Y CEREZAS · CASETA 1» e instala todos los mapas.
+
+COMPROBACIÓN
+- Debe aparecer como quinta opción del selector.
+- El catálogo debe indicar 40 cuarteles habilitados.
+- Revisa B-1 (0,78 ha), B-26 (0,43 ha), S-53 (0,77 ha) y S-66 (0,85 ha).
+- Comprueba zoom, selección, registro, historial y envío de informe.
+- Prueba la instalación completa y después el modo avión.
+
+IMPORTANTE
+Las hectáreas se conservaron literalmente desde las etiquetas del SVG. La validación automática de etiquetas no reemplaza una revisión topográfica de campo. No borres el almacenamiento del navegador ni las cachés de los mapas anteriores.

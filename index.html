@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTIÓN AGRÍCOLA · V34.14 Precisión y rotación</title>
+<title>GESTIÓN AGRÍCOLA · V34.15 Multi-mapa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
@@ -331,7 +331,7 @@ tfoot td{padding:10px 11px;font-weight:900;color:var(--emerald);border-top:1px s
 
 
 /* ==========================================================
-   V34.14 · CYBER-EXECUTIVE AGROVALLE
+   V34.15 · CYBER-EXECUTIVE AGROVALLE
    Capa visual: no modifica geometrías, catálogos ni hectáreas.
    ========================================================== */
 :root{
@@ -727,7 +727,7 @@ tfoot td{color:#6ee7b7}
 
 
 /* ==========================================================
-   V34.14 · HIGH-CONTRAST CYBER-AGTECH AGROVALLE
+   V34.15 · HIGH-CONTRAST CYBER-AGTECH AGROVALLE
    Port visual del prototipo aprobado. Conserva la lógica,
    catálogos, registros y geometrías SVG de producción.
    ========================================================== */
@@ -1369,7 +1369,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i><span>Historial</span></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.14 PRECISIÓN + ROTACIÓN</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.15 MULTI-MAPA</span></div>
   </aside>
 
   <div class="stage">
@@ -1664,9 +1664,9 @@ const historyTag = 'agroValleNavigationV32';
 const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
-const MAP_REGISTRY_HASH='6d70f26d2b03140683ae461c5d287edc7d1a200f3516c10ad5485ee847437f60';
-// Esperar a la activación de V34.14 antes de leer metadatos y recursos de interfaz actualizados.
-const EXPECTED_SW_VERSION='v34.14';
+const MAP_REGISTRY_HASH='311e30c3fff6d7df3314a2c7b04c15d0fd98b26d7bade0ff846ada8ec9023a45';
+// Esperar a la activación de V34.15 antes de leer metadatos y recursos de interfaz actualizados.
+const EXPECTED_SW_VERSION='v34.15';
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
@@ -2488,7 +2488,7 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-14-precision-rotation';
+  const SHELL_VERSION='agrovalle-shell-v34-15-multi-map';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -2937,7 +2937,7 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
     if(!('caches' in window)){mapInstallMessage('Cache Storage no está disponible. Abre la aplicación por HTTPS en Safari o Chrome.');return false;}
     try{
       await loadMapRegistry();
-      if(!mapRegistryError&&mapRegistry.length===4){
+      if(!mapRegistryError&&mapRegistry.length>=5){
         const installed=await Promise.all(mapRegistry.map(checkMapCacheComplete));
         if(installed.every(Boolean)&&await hasOfflineShell()){installLabel.textContent='Todos los mapas instalados ✓';mapInstallMessage('');return true;}
       }
@@ -2988,7 +2988,7 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
         }
         const shellAudit=await inspectOfflineShell();
         if(!shellAudit.ok){
-          if(!shellAudit.active)throw Error('El Service Worker V34.14 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          if(!shellAudit.active)throw Error('El Service Worker V34.15 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
           if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
           if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
           throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));

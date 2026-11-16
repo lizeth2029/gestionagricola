@@ -1,7 +1,7 @@
-/* GESTION AGRICOLA V34.14 · ROTACIÓN Y AUDITORÍA PRECISA: reparación offline y eliminación de Modo sol.
+/* GESTION AGRICOLA V34.15 · INCORPORACIÓN PALTOS Y CEREZAS CASETA 1: reparación offline y eliminación de Modo sol.
    Conserva las cachés cartográficas existentes y valida la versión activa del SW. */
-const SW_VERSION='v34.14';
-const SHELL='agrovalle-shell-v34-14-precision-rotation';
+const SW_VERSION='v34.15';
+const SHELL='agrovalle-shell-v34-15-multi-map';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './index.html','./manifest.webmanifest','./maps/catalog.json',
@@ -10,6 +10,7 @@ const CORE=[
   './maps/paltos-caseta-2-y-3/manifest.json','./maps/paltos-caseta-2-y-3/cuarteles-fuente.json','./maps/paltos-caseta-2-y-3/labels.json',
   './maps/paltos-sector-7/manifest.json','./maps/paltos-sector-7/cuarteles-fuente.json','./maps/paltos-sector-7/labels.json',
   './maps/paltos-sector-8/manifest.json','./maps/paltos-sector-8/cuarteles-fuente.json','./maps/paltos-sector-8/labels.json',
+  './maps/paltos-y-cerezas-caseta-1/manifest.json','./maps/paltos-y-cerezas-caseta-1/cuarteles-fuente.json','./maps/paltos-y-cerezas-caseta-1/labels.json',
   './assets/icon-192.png','./assets/icon-512.png','./assets/favicon-logo.png','./assets/favicon.ico',
   './assets/fontawesome/css/all.min.css',
   './assets/fontawesome/webfonts/fa-solid-900.woff2',
@@ -55,6 +56,9 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
   ]);
   await copyUpdatedMetadata(shell,'agrovalle-map-v34-8-paltos-sector-8',[
     './maps/paltos-sector-8/manifest.json','./maps/paltos-sector-8/cuarteles-fuente.json','./maps/paltos-sector-8/labels.json'
+  ]);
+  await copyUpdatedMetadata(shell,'agrovalle-map-v34-8-paltos-y-cerezas-caseta-1',[
+    './maps/paltos-y-cerezas-caseta-1/manifest.json','./maps/paltos-y-cerezas-caseta-1/cuarteles-fuente.json','./maps/paltos-y-cerezas-caseta-1/labels.json'
   ]);
   await self.clients.claim();
   // Solo retirar shells antiguos si la nueva caché esencial está completa.

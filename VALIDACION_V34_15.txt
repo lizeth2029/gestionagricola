@@ -1,0 +1,43 @@
+VALIDACIÓN ESTÁTICA — GESTIÓN AGRÍCOLA V34.15
+
+APLICACIÓN
+[OK] JavaScript inline de index.html: node --check.
+[OK] sw.js: node --check.
+[OK] CSS: análisis sintáctico sin errores.
+[OK] HTML: parser completado sin excepción.
+[OK] SHELL_VERSION coincide con SHELL.
+[OK] EXPECTED_SW_VERSION coincide con SW_VERSION (v34.15).
+[OK] MAP_REGISTRY_HASH coincide con maps/catalog.json.
+[OK] Catálogo multi-mapa contiene 5 mapas.
+[OK] Atajo de instalación reconoce 5 o más mapas.
+[OK] Service Worker incluye metadatos del nuevo mapa y copia a su caché propia.
+
+NUEVO MAPA
+[OK] Fuente SVG SHA-256: 19d2a9365df8f2854668a33ca54fe0fdf210ce89f6e9de2e95d9dc6221d3dd7f
+[OK] Manifiesto SHA-256 coincide con el registro.
+[OK] 75/75 recursos del manifiesto existen y sus SHA-256 coinciden.
+[OK] Catálogo: 40 cuarteles, 0 bloqueados.
+[OK] Etiquetas SVG: 116.
+[OK] 40/40 asociaciones de nombre-superficie son mutuamente más cercanas.
+[OK] Distancia máxima entre etiquetas: 5.7454 unidades.
+[OK] Razón mínima de segunda opción: 2.2385.
+[OK] Suma aritmética de las superficies impresas: 15,26 ha.
+[OK] 35/35 teselas vectoriales SVG válidas, sin imágenes raster incrustadas.
+[OK] 35/35 teselas fotográficas JPEG de 1024 × 1024 píxeles.
+[OK] Teselas vectoriales configuradas a 512 × 512 unidades para limitar memoria por sector.
+[OK] Vista general y resumen vectorial presentes.
+
+INTEGRIDAD
+[OK] Los cuatro mapas previos y sus recursos no se modificaron.
+[OK] No se recalcularon ni modificaron las hectáreas del SVG.
+[OK] Se conserva el SVG original en fuentes_v34_15 para trazabilidad.
+
+PENDIENTE DE PRUEBA EN DISPOSITIVOS
+[PENDIENTE] Publicar en GitHub y esperar Cloudflare Pages.
+[PENDIENTE] Instalar los cinco mapas con conexión.
+[PENDIENTE] Probar selección y registro de cuarteles en iPhone 13/Safari.
+[PENDIENTE] Probar selección y registro en Android.
+[PENDIENTE] Probar modo avión y recuperación al volver la señal.
+[PENDIENTE] Revisar informes y jornadas del nuevo mapa.
+
+Esta validación es estática y de integridad de archivos. No sustituye la prueba funcional en dispositivos ni la confirmación topográfica en terreno.

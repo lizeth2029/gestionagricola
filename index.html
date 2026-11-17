@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=5.0">
-<title>GESTIÓN AGRÍCOLA · V34.15 Multi-mapa</title>
+<title>GESTIÓN AGRÍCOLA · V34.17 Multi-mapa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
 <link rel="icon" type="image/png" sizes="128x128" href="./assets/favicon-logo.png">
@@ -1369,7 +1369,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
     <button type="button" class="av-tab" data-av-tab="historial" title="Historial" aria-label="Historial"><i class="fa-solid fa-clock-rotate-left"></i><span>Historial</span></button>
     <div class="rail-sep"></div>
     <button type="button" id="btn-rail-svg" class="av-tab" title="Cargar plano SVG" aria-label="Cargar plano SVG"><i class="fa-solid fa-folder-open"></i></button>
-    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.15 MULTI-MAPA</span></div>
+    <div class="rail-foot"><span class="pill" style="font-size:9.5px;padding:5px 8px">V34.17 MULTI-MAPA</span></div>
   </aside>
 
   <div class="stage">
@@ -1664,11 +1664,11 @@ const historyTag = 'agroValleNavigationV32';
 const fmt = n => Number(n || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localDay = () => { const d = new Date(), off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0, 10); };
 const MAP_REGISTRY_URL='maps/catalog.json';
-const MAP_REGISTRY_VERSION='v34.16';
+const MAP_REGISTRY_VERSION='v34.17';
 const MAP_REGISTRY_HASH='311e30c3fff6d7df3314a2c7b04c15d0fd98b26d7bade0ff846ada8ec9023a45';
 const MAP_REGISTRY_FALLBACK_RAW="{\n  \"version\": \"v34.9-multi-map\",\n  \"defaultMapId\": \"proyecto-2026\",\n  \"maps\": [\n    {\n      \"id\": \"proyecto-2026\",\n      \"name\": \"Proyecto 2026\",\n      \"manifest\": \"map-svg/manifest-v34-5.json\",\n      \"manifestHash\": \"a070e96f1a08c9600003dcc95263895fb8793568882bd8d4e237a73fb574bb03\",\n      \"catalog\": \"map-svg/cuarteles-fuente-v34-5.json\",\n      \"labels\": \"map-svg/labels.json\",\n      \"extras\": \"map-svg/extras.json\",\n      \"overview\": \"map-svg/vista-general-satelital.jpg\",\n      \"overviewVectors\": \"map-svg/resumen-vectores-original.svg\",\n      \"vectorDir\": \"map-svg/vectores/\",\n      \"photoDir\": \"map-svg/foto/\",\n      \"sourceSvgHash\": \"206807d5d85a4d2e358dea3cb7635cbf37b5ffba9a35636f8d390fe00d052c75\",\n      \"catalogHash\": \"1caa8f50df18d29262145fa7e39bfe66f69f9d2abd4330d591a4bb469918b943\",\n      \"labelsHash\": \"8f256f9994b830ce4f1b2949fb4de93fa4ff79ecb54f5bb8c61a5ddf3066ba4b\",\n      \"catalogVersion\": \"v34-5-ubicaciones-svg-2026\",\n      \"manifestVersion\": \"v34-9-proyecto-2026\",\n      \"cuartelCount\": 738,\n      \"validCount\": 738,\n      \"blockedCount\": 0,\n      \"labelsCount\": 1325,\n      \"overviewMode\": \"separate\",\n      \"mapCacheSuffix\": \"proyecto-2026\"\n    },\n    {\n      \"id\": \"paltos-caseta-2-y-3\",\n      \"name\": \"PALTOS CASETA 2 Y 3\",\n      \"manifest\": \"maps/paltos-caseta-2-y-3/manifest.json\",\n      \"catalog\": \"maps/paltos-caseta-2-y-3/cuarteles-fuente.json\",\n      \"labels\": \"maps/paltos-caseta-2-y-3/labels.json\",\n      \"extras\": \"maps/paltos-caseta-2-y-3/extras.json\",\n      \"overview\": \"maps/paltos-caseta-2-y-3/vista-general.jpg\",\n      \"overviewVectors\": \"maps/paltos-caseta-2-y-3/resumen-vectores.svg\",\n      \"vectorDir\": \"maps/paltos-caseta-2-y-3/vectores/\",\n      \"photoDir\": \"maps/paltos-caseta-2-y-3/foto/\",\n      \"sourceSvgHash\": \"5fe376e8f0d45fb5a86efaf736b07782077e0ca23fce1d15284420407c31998c\",\n      \"catalogHash\": \"ddcb0ad54b207a924ac43fafaec9b676aceffd231ba84427f1130cdbdbf8f9d4\",\n      \"labelsHash\": \"1c7da218d525d694d96ee3761ec74cb55753e84b73a816c46ce5188c211b38d6\",\n      \"manifestHash\": \"fd7845568f3e96eed3498708ac07e46f32948163cd70a2bf94a866a932b45df1\",\n      \"catalogVersion\": \"v34-9-paltos-caseta-2-y-3-catalogo-validado-manualmente\",\n      \"manifestVersion\": \"v34-9-paltos-caseta-2-y-3\",\n      \"cuartelCount\": 625,\n      \"validCount\": 625,\n      \"blockedCount\": 0,\n      \"labelsCount\": 1266,\n      \"overviewMode\": \"separate\",\n      \"mapCacheSuffix\": \"paltos-caseta-2-y-3\"\n    },\n    {\n      \"id\": \"paltos-sector-7\",\n      \"name\": \"PALTOS SECTOR 7\",\n      \"manifest\": \"maps/paltos-sector-7/manifest.json\",\n      \"catalog\": \"maps/paltos-sector-7/cuarteles-fuente.json\",\n      \"labels\": \"maps/paltos-sector-7/labels.json\",\n      \"extras\": \"maps/paltos-sector-7/extras.json\",\n      \"overview\": \"maps/paltos-sector-7/vista-general.jpg\",\n      \"overviewVectors\": \"maps/paltos-sector-7/resumen-vectores.svg\",\n      \"vectorDir\": \"maps/paltos-sector-7/vectores/\",\n      \"photoDir\": \"maps/paltos-sector-7/foto/\",\n      \"sourceSvgHash\": \"ca492497564ec0cf5c3914def5bd872072f2cb8e0f455cf494feade829bfe4ab\",\n      \"catalogHash\": \"4e79c1f9480c5ea7afab11fa1cba532bf9facb3a7e46e6d8b3f95e9f78311b35\",\n      \"labelsHash\": \"617a3621b73b16cf522accce5eb33464ca65b2c176d649293f7378879fdce69a\",\n      \"manifestHash\": \"23e4fda4ff4b3403f5d019cf26f5bdee98d2feb13b32f367e16cb6e1dd48f0b7\",\n      \"catalogVersion\": \"v34-8-paltos-sector-7-catalogo-espacial\",\n      \"manifestVersion\": \"v34-9-paltos-sector-7\",\n      \"cuartelCount\": 273,\n      \"validCount\": 273,\n      \"blockedCount\": 0,\n      \"labelsCount\": 561,\n      \"overviewMode\": \"separate\",\n      \"mapCacheSuffix\": \"paltos-sector-7\"\n    },\n    {\n      \"id\": \"paltos-sector-8\",\n      \"name\": \"PALTOS SECTOR 8\",\n      \"manifest\": \"maps/paltos-sector-8/manifest.json\",\n      \"catalog\": \"maps/paltos-sector-8/cuarteles-fuente.json\",\n      \"labels\": \"maps/paltos-sector-8/labels.json\",\n      \"extras\": \"maps/paltos-sector-8/extras.json\",\n      \"overview\": \"maps/paltos-sector-8/vista-general.jpg\",\n      \"overviewVectors\": \"maps/paltos-sector-8/resumen-vectores.svg\",\n      \"vectorDir\": \"maps/paltos-sector-8/vectores/\",\n      \"photoDir\": \"maps/paltos-sector-8/foto/\",\n      \"sourceSvgHash\": \"9856b4bab221bfaa7be5bf786001f4aad06393a8efca2aa268e18b9832742465\",\n      \"catalogHash\": \"bfb6a517794fceb6c5ebe409cfb99d43d55f8a3f1e27fbd77728b8f54635ddb9\",\n      \"labelsHash\": \"daa8cde02d2b8b039ae7260f5e7ca92b724aed92d2434aa3744919f0c23c333e\",\n      \"manifestHash\": \"2bf3397d9d3995960dd4627aa69df95384454a184d09706a1ef3afa2a1e43546\",\n      \"catalogVersion\": \"v34-9-paltos-sector-8-catalogo-validado-manualmente\",\n      \"manifestVersion\": \"v34-9-paltos-sector-8\",\n      \"cuartelCount\": 313,\n      \"validCount\": 313,\n      \"blockedCount\": 0,\n      \"labelsCount\": 655,\n      \"overviewMode\": \"separate\",\n      \"mapCacheSuffix\": \"paltos-sector-8\"\n    },\n    {\n      \"id\": \"paltos-y-cerezas-caseta-1\",\n      \"name\": \"PALTOS Y CEREZAS \u00b7 CASETA 1\",\n      \"manifest\": \"maps/paltos-y-cerezas-caseta-1/manifest.json\",\n      \"manifestHash\": \"51e90c64865a5de8aef22578328ea91af873e0700a26f38c00cfbbcc40e3170c\",\n      \"catalog\": \"maps/paltos-y-cerezas-caseta-1/cuarteles-fuente.json\",\n      \"labels\": \"maps/paltos-y-cerezas-caseta-1/labels.json\",\n      \"extras\": \"maps/paltos-y-cerezas-caseta-1/extras.json\",\n      \"overview\": \"maps/paltos-y-cerezas-caseta-1/vista-general.jpg\",\n      \"overviewVectors\": \"maps/paltos-y-cerezas-caseta-1/resumen-vectores.svg\",\n      \"vectorDir\": \"maps/paltos-y-cerezas-caseta-1/vectores/\",\n      \"photoDir\": \"maps/paltos-y-cerezas-caseta-1/foto/\",\n      \"sourceSvgHash\": \"19d2a9365df8f2854668a33ca54fe0fdf210ce89f6e9de2e95d9dc6221d3dd7f\",\n      \"catalogHash\": \"091b2f613b699038c24a8ab0fbbd7a8cfa313d4531d13993773482cc028630e1\",\n      \"labelsHash\": \"b8a83f25893d431366189191b3c18a97f11a366f311bf508579392c0a54aa544\",\n      \"catalogVersion\": \"v34-15-paltos-y-cerezas-caseta-1-catalogo-espacial\",\n      \"manifestVersion\": \"v34-15-paltos-y-cerezas-caseta-1\",\n      \"cuartelCount\": 40,\n      \"validCount\": 40,\n      \"blockedCount\": 0,\n      \"labelsCount\": 116,\n      \"overviewMode\": \"separate\",\n      \"mapCacheSuffix\": \"paltos-y-cerezas-caseta-1\"\n    }\n  ]\n}\n";
-// Esperar a la activación de V34.15 antes de leer metadatos y recursos de interfaz actualizados.
-const EXPECTED_SW_VERSION='v34.16';
+// Esperar a la activación de V34.17 antes de leer metadatos y recursos de interfaz actualizados.
+const EXPECTED_SW_VERSION='v34.17';
 const serviceWorkerReadyPromise=(async()=>{
   if(!('serviceWorker' in navigator))return null;
   try{
@@ -1807,8 +1807,43 @@ async function verifySpecialAreaLabels(byId){
   verifyCompositeAreaRules(byId,labels,activeMapId);
   return labels;
 }
-let sourceCatalogReady=false, sourceCatalogLoading=null, sourceCatalogGeneration=0, sourceCatalogById=new Map(), sourceCatalogByName=new Map(), sourceCatalogError='',sourceLabels=[];
+let sourceCatalogReady=false, sourceCatalogLoading=null, sourceCatalogGeneration=0, sourceCatalogById=new Map(), sourceCatalogByName=new Map(), sourceCatalogError='',sourceLabels=[],sourceMarkerAnchors=new Map();
 const normalizeCuartel = s => String(s||'').trim().replace(/\s+/g,'').toUpperCase();
+// Coordenadas visuales exactas del rótulo del cuartel, resueltas desde labels.json
+// (cuya huella SHA-256 ya fue verificada). En Proyecto 2026 algunos índices
+// heredados del catálogo no coinciden con el orden actual de labels.json; por eso
+// se resuelve por código + proximidad a la coordenada oficial del catálogo.
+function buildSourceMarkerAnchors(catalog,labels,mapId){
+  const labelsByName=new Map();
+  for(const label of labels){
+    const key=normalizeCuartel(label?.text);
+    const x=Number(label?.x),y=Number(label?.y),height=Number(label?.height);
+    if(!key||!Number.isFinite(x)||!Number.isFinite(y))continue;
+    const list=labelsByName.get(key)||[];
+    list.push({x,y,height:Number.isFinite(height)&&height>0?height:1});
+    labelsByName.set(key,list);
+  }
+  const anchors=new Map();
+  for(const item of catalog.cuarteles){
+    const candidates=labelsByName.get(normalizeCuartel(item.nombre))||[];
+    let best=null,second=Infinity;
+    for(const label of candidates){
+      const distance=Math.hypot(label.x-Number(item.x),label.y-Number(item.y));
+      if(!best||distance<best.distance){second=best?.distance??Infinity;best={label,distance};}
+      else if(distance<second)second=distance;
+    }
+    // No adivinar ubicaciones: si el rótulo no tiene correspondencia espacial
+    // única con su ID de catálogo, no se habilita una posición visual aproximada.
+    if(!best||best.distance>8||(Number.isFinite(second)&&second-best.distance<8))
+      throw Error('No se pudo verificar el anclaje visual del cuartel '+item.nombre+' en '+mapId+'.');
+    anchors.set(item.id,{
+      labelCenterX:best.label.x,
+      labelY:best.label.y,
+      labelHeight:Math.max(.1,best.label.height)
+    });
+  }
+  return anchors;
+}
 // Solo los códigos de nombre único permiten resolver registros legados por nombre.
 // Para P-59 se exige SIEMPRE ID espacial: la superficie sola no identifica la ubicación.
 function originalFor(name) {
@@ -1929,7 +1964,7 @@ function updateMapSelectorUI(){
     const valid=Number(mapConfig?.validCount)||0,blocked=Number(mapConfig?.blockedCount)||0;
     note.textContent='Mapa activo: '+(mapConfig?.name||'Proyecto 2026')+' · '+valid+' cuarteles habilitados · '+blocked+' bloqueados por revisión. Cada mapa conserva sus propios registros e historial.';
     if(mapRegistryError)note.textContent+=' Catálogo de mapas: '+mapRegistryError+' Se mantiene Proyecto 2026.';
-    else if(mapRegistryUsingFallback)note.textContent+=' Catálogo integrado de respaldo V34.16 activo; se sincronizará con el servidor al recuperar conexión.';
+    else if(mapRegistryUsingFallback)note.textContent+=' Catálogo integrado de respaldo V34.17 activo; se sincronizará con el servidor al recuperar conexión.';
   }
   const chip=$('active-map-chip');if(chip)chip.textContent=mapConfig?.name||'Proyecto 2026';
 }
@@ -2038,8 +2073,9 @@ async function loadSourceCatalog() {
       labels=await verifyNewMapLabels(catalog);
       verifyCompositeAreaRules(byId,labels,activeMapId);
     }
+    const markerAnchors=buildSourceMarkerAnchors(catalog,labels,mapId);
     if(generation!==sourceCatalogGeneration||mapId!==activeMapId)return false;
-    sourceCatalogById=byId;sourceCatalogByName=byName;sourceLabels=labels;
+    sourceCatalogById=byId;sourceCatalogByName=byName;sourceLabels=labels;sourceMarkerAnchors=markerAnchors;
     sourceCatalogReady=true;sourceCatalogError='';
     updateMapSelectorUI();updateAuditNotice();table();renderReportRows();refreshKPIs();
     if(!$('av-history').hidden)renderHistory();
@@ -2338,7 +2374,7 @@ const markerOverlay = document.createElement('canvas');
 markerOverlay.id = 'agro-marker-overlay';
 markerOverlay.setAttribute('aria-hidden', 'true');
 viewport.append(markerOverlay);
-let markerTimer = 0, markerCount = 0, sprayerBitmap = null;
+let markerFrame = 0, markerCount = 0, sprayerBitmap = null;
 
 function buildSprayerBitmap() {
   const doc = new DOMParser().parseFromString(SPRAYER_SPRITE, 'image/svg+xml');
@@ -2372,13 +2408,16 @@ function placeMarkers() {
   if (!sprayerBitmap) return;
   const m=mapMetrics();if(!m)return;
   const height=Math.max(23,Math.min(28,rect.width*.062));
-  const width=height*200/250,feetFraction=218/250,gap=4;
-  const lift=rotateVector(0,-(gap+height*feetFraction),rotation);
+  const width=height*200/250,feetFraction=218/250,gap=3;
+  // El punto de apoyo del personaje queda a 3 px del borde superior del nombre.
+  // El pequeño desplazamiento sigue la rotación del plano una sola vez; la altura
+  // del sprite se resta únicamente al calcular su esquina superior en el canvas.
+  const lift=rotateVector(0,-gap,rotation);
   for (const [id, pos] of markerBounds) {
     const labelTop=m.toScreen(pos.labelCenterX,pos.labelY-pos.labelHeight/2);
-    const bottomX=labelTop.x+lift.x,bottomY=labelTop.y+lift.y;
-    const x=bottomX-rect.left-width/2;
-    const y=bottomY-rect.top-height*feetFraction;
+    const footX=labelTop.x+lift.x,footY=labelTop.y+lift.y;
+    const x=footX-rect.left-width/2;
+    const y=footY-rect.top-height*feetFraction;
     if (x > rect.width + 12 || y > rect.height + 12 || x + width < -12 || y + height < -12) continue;
     ctx.drawImage(sprayerBitmap,x,y,width,height);
     markerScreenBounds.set(id,{x,y,width,height});
@@ -2386,15 +2425,10 @@ function placeMarkers() {
   markerOverlay.style.visibility = 'visible';
 }
 function deferMarkers() {
-  markerOverlay.style.visibility = 'hidden';
-  clearTimeout(markerTimer);
-  markerTimer = setTimeout(() => requestAnimationFrame(placeMarkers), 300);
-}
-function markerPosition(c) {
-  if (!c || !Number.isFinite(+c.seedX) || !Number.isFinite(+c.seedY)) return null;
-  const labelHeight = Math.max(.1, Number(c.labelHeight) || 1);
-  const labelHalfWidth = Math.max(.1, Number(c.labelHalfWidth) || labelHeight);
-  return { labelRight: Number(c.seedX) + labelHalfWidth, labelCenterX: Number(c.seedX), labelY: Number(c.seedY), labelHeight };
+  // No ocultar los personajes durante el gesto: se recalculan en el siguiente
+  // frame y permanecen visualmente unidos a sus etiquetas al desplazar/rotar.
+  if(markerFrame)return;
+  markerFrame=requestAnimationFrame(()=>{markerFrame=0;placeMarkers();});
 }
 function drawFlags() {
   if (!svg) return;
@@ -2413,8 +2447,8 @@ function drawFlags() {
     if (auditRows([checked]).length) continue;
     const src=sourceCatalogById.get(id);
     if(!src||sourceForRow(checked)?.id!==id)continue;
-    const c=data.contornos[id];
-    const pos=markerPosition(c);if(!pos)continue;
+    const pos=sourceMarkerAnchors.get(id);
+    if(!pos)continue;
     markerBounds.set(id,pos);painted++;
   }
   markerCount=painted;
@@ -2480,7 +2514,7 @@ function selectAt(x,y) {
 function applyTransform() {
   frame=0;if(!svg)return;
   svg.style.transform=`translate(${panX}px,${panY}px) scale(${zoom}) rotate(${rotation}rad)`;
-  deferMarkers();scheduleTiles();
+  placeMarkers();scheduleTiles();
 }
 function scheduleTransform(){if(!frame)frame=requestAnimationFrame(applyTransform);}
 function zoomAt(f,x,y){
@@ -2512,7 +2546,7 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
   }
   // El caché histórico se conserva para Proyecto 2026; cada mapa nuevo tiene caché independiente.
   const mapCacheName=()=>activeMapId==='proyecto-2026'?'agrovalle-map-v34-4-precision':'agrovalle-map-v34-8-'+activeMapId;
-  const SHELL_VERSION='agrovalle-shell-v34-16-multi-map';
+  const SHELL_VERSION='agrovalle-shell-v34-17-marker-anchor';
   const LOGO_URL='https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png';
   const logoEl=$('gestion-logo');
   logoEl.addEventListener('error',()=>{
@@ -3012,7 +3046,7 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
         }
         const shellAudit=await inspectOfflineShell();
         if(!shellAudit.ok){
-          if(!shellAudit.active)throw Error('El Service Worker V34.15 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          if(!shellAudit.active)throw Error('El Service Worker V34.17 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
           if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
           if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
           throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));
@@ -3322,7 +3356,7 @@ async function switchActiveMap(nextId,options={}){
   if(!options.fromHistory){try{localStorage.setItem(ACTIVE_MAP_STORE,activeMapId);}catch(e){}}
   setStorageKeys(activeMapId);data=readStoredMapData();
   sourceCatalogGeneration++;sourceCatalogLoading=null;sourceCatalogReady=false;
-  sourceCatalogById=new Map();sourceCatalogByName=new Map();sourceLabels=[];sourceCatalogError='';
+  sourceCatalogById=new Map();sourceCatalogByName=new Map();sourceLabels=[];sourceMarkerAnchors=new Map();sourceCatalogError='';
   mapLoadGeneration++;mapReady=false;mapManifest=null;mapExtras=[];autoSvgLoaded=false;highDetail=false;
   overviewVectorReady=false;overviewVectorLoading=false;overviewImage=null;overviewVectorGroup=null;
   tileGroup=null;vectorGroup=null;extraGroup=null;svg=null;detected=[];

@@ -1,7 +1,7 @@
-/* GESTION AGRICOLA V34.16 · FIX CATÁLOGO MULTI-MAPA Y CACHÉ: reparación offline y eliminación de Modo sol.
+/* GESTION AGRICOLA V34.17 · ANCLAJE PRECISO DE PERSONAJES AL SVG: reparación offline y eliminación de Modo sol.
    Conserva las cachés cartográficas existentes y valida la versión activa del SW. */
-const SW_VERSION='v34.16';
-const SHELL='agrovalle-shell-v34-16-multi-map';
+const SW_VERSION='v34.17';
+const SHELL='agrovalle-shell-v34-17-marker-anchor';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './index.html','./manifest.webmanifest','./maps/catalog.json',

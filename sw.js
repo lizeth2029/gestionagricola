@@ -1,7 +1,7 @@
-/* GESTION AGRICOLA V34.15 · INCORPORACIÓN PALTOS Y CEREZAS CASETA 1: reparación offline y eliminación de Modo sol.
+/* GESTION AGRICOLA V34.16 · FIX CATÁLOGO MULTI-MAPA Y CACHÉ: reparación offline y eliminación de Modo sol.
    Conserva las cachés cartográficas existentes y valida la versión activa del SW. */
-const SW_VERSION='v34.15';
-const SHELL='agrovalle-shell-v34-15-multi-map';
+const SW_VERSION='v34.16';
+const SHELL='agrovalle-shell-v34-16-multi-map';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './index.html','./manifest.webmanifest','./maps/catalog.json',
@@ -100,12 +100,20 @@ self.addEventListener('fetch',event=>{
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
   if(url.pathname.endsWith('/maps/catalog.json')){
+    // Network-first: never let an older cached catalog hide newly added maps.
+    // Keep the last verified copy only as an offline fallback.
     event.respondWith((async()=>{
-      const cache=await caches.open(SHELL),cached=await cache.match(request,{ignoreSearch:true});
-      if(cached)return cached;
-      const response=await fetch(request);
-      if(response.ok){try{await cache.put(request,response.clone());}catch(error){}}
-      return response;
+      const cache=await caches.open(SHELL);
+      const canonical=absoluteURL('./maps/catalog.json');
+      try{
+        const fresh=await fetch(new Request(request,{cache:'no-store'}));
+        if(fresh.ok){try{await cache.put(canonical,fresh.clone());}catch(error){}}
+        return fresh;
+      }catch(error){
+        const cached=await cache.match(canonical)||await cache.match(request,{ignoreSearch:true});
+        if(cached)return cached;
+        return Response.error();
+      }
     })());return;
   }
   const mapCache=mapCacheFor(request.url);

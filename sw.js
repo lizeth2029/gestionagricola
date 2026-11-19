@@ -1,7 +1,7 @@
 /* GESTION AGRICOLA V34.17 · ANCLAJE PRECISO DE PERSONAJES AL SVG: reparación offline y eliminación de Modo sol.
    Conserva las cachés cartográficas existentes y valida la versión activa del SW. */
-const SW_VERSION='v34.17';
-const SHELL='agrovalle-shell-v34-17-marker-anchor';
+const SW_VERSION='v34.18-multimapa-v3.2-cache';
+const SHELL='agrovalle-shell-v34-18-multimapa-v3-2';
 const MAP_BASE='agrovalle-map-v34-4-precision';
 const CORE=[
   './index.html','./manifest.webmanifest','./maps/catalog.json',
@@ -116,6 +116,18 @@ self.addEventListener('fetch',event=>{
       }
     })());return;
   }
+  // El HTML de la aplicación siempre se busca en red primero, incluso en recargas.
+  // Si no hay señal se utiliza la última copia guardada; nunca se borra localStorage.
+  if(url.pathname.endsWith('/index.html')){
+    event.respondWith((async()=>{
+      const cache=await caches.open(SHELL);
+      try{
+        const fresh=await fetch(new Request(request,{cache:'no-store'}));
+        if(fresh.ok){await cache.put(absoluteURL('./index.html'),fresh.clone());return fresh;}
+      }catch(error){}
+      return await cache.match(absoluteURL('./index.html'))||Response.error();
+    })());return;
+  }
   const mapCache=mapCacheFor(request.url);
   if(mapCache){
     event.respondWith((async()=>{
@@ -129,7 +141,7 @@ self.addEventListener('fetch',event=>{
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
       try{
-        const response=await fetch(request);
+        const response=await fetch(new Request(request,{cache:'no-store'}));
         if(response.ok){try{await (await caches.open(SHELL)).put(absoluteURL('./index.html'),response.clone());}catch(error){}}
         return response;
       }catch(error){

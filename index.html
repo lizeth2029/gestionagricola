@@ -3385,7 +3385,19 @@ $('rep-date-today').addEventListener('click',()=>selectWorkDate(localDay()));
 rep('custom').addEventListener('input', persistReport);
 toggleCustom();
 
-const datedRows = () => Object.values(data.registros).filter(r => r.fecha === rep('date').value);
+// Orden natural por prefijo y número: B-2 antes de B-10, P-588 antes de P-590.
+// No modifica el orden físico ni los identificadores de los registros guardados.
+const cuartelCollator = new Intl.Collator('es', {numeric:true, sensitivity:'base'});
+function sortCuartelRows(rows){
+  return [...rows].sort((a,b)=>cuartelCollator.compare(String(a?.name||''),String(b?.name||'')) ||
+    cuartelCollator.compare(String(a?.mapName||a?.mapId||''),String(b?.mapName||b?.mapId||'')) ||
+    cuartelCollator.compare(String(a?.cuartelId||''),String(b?.cuartelId||'')));
+}
+function reportMapNames(rows){
+  const ids=[...new Set(rows.map(r=>r.mapId||'proyecto-2026'))];
+  return ids.map(id=>mapNameForId(id)).join(' y ');
+}
+const datedRows = () => sortCuartelRows(Object.values(data.registros).filter(r => r.fecha === rep('date').value));
 const undatedRows = () => Object.values(data.registros).filter(r => !r.fecha);
 
 function formatWorkDate(date){
@@ -3403,7 +3415,7 @@ function noRowsForDateMessage(date){
     (undated?'; sin fecha de jornada: '+undated:'')+'. Cambia la fecha para preparar el informe correcto.';
 }
 function renderReportRows() {
-  const rows = historicalPanel ? historicalPanel.rows : datedRows(), total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
+  const rows = historicalPanel ? sortCuartelRows(historicalPanel.rows) : datedRows(), total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
   const host = rep('registers'); host.replaceChildren();
   if (!rows.length) {
     const empty = document.createElement('div');
@@ -3451,7 +3463,7 @@ function renderReportRows() {
 function reportText() {
   const date = rep('date').value;
   if (!validWorkDate(date)) throw Error('Selecciona una fecha válida, igual o anterior al día de hoy.');
-  const rows = historicalPanel ? historicalPanel.rows : datedRows();
+  const rows = historicalPanel ? sortCuartelRows(historicalPanel.rows) : datedRows();
   if (!rows.length) throw Error(noRowsForDateMessage(date));
   const issues=auditRows(rows);if(issues.length){
     const detail=issues.slice(0,6).map(p=>p.name+': '+p.reason).join(' | ');
@@ -3465,7 +3477,7 @@ function reportText() {
   return [
     '*📋 INFORME DE APLICACIÓN DE HERBICIDAS*',
     '*Sector:* ' + rep('sector').value.trim(),
-    '*🗺️ Mapa de registro:* ' + mapConfig.name, '',
+    '*🗺️ Mapa de registro:* ' + reportMapNames(rows), '',
     '*📅 Fecha:* ' + day + '-' + month + '-' + year,
     '*👤 Contratista:* ' + rep('contractor').value.trim(),
     '*🏢 Empresa:* ' + rep('company').value.trim(),

@@ -805,13 +805,15 @@ body{
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
 .brand-logo{
-  background:linear-gradient(135deg,#00e5ff 0%,#00ff66 100%);
-  border:1px solid rgba(255,255,255,.85);
-  border-radius:15px;
-  padding:5px;
-  box-shadow:0 0 24px rgba(0,229,255,.45),inset 0 1px 0 rgba(255,255,255,.65);
-  mix-blend-mode:multiply;
+  background:#f1fffd;
+  border:1px solid rgba(125,235,225,.9);
+  border-radius:13px;
+  padding:1px;
+  box-shadow:0 0 12px rgba(0,229,255,.25);
+  mix-blend-mode:normal;
+  filter:none;opacity:1;
 }
+
 .brand h1{
   color:#fff;
   background:linear-gradient(100deg,#fff 0%,#bae6fd 56%,#00ff9d 100%);
@@ -1376,7 +1378,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
     <header class="topbar">
       <div class="brand">
         <img id="gestion-logo" class="brand-logo"
-             src="https://www.image2url.com/r2/default/images/1794304567912-d9d872ca-f71a-44ab-8213-dafedd1ed0b5.png"
+             src="./assets/favicon-logo.png"
              alt="Logo de Gestión Agrícola" width="40" height="40"
              referrerpolicy="no-referrer">
         <div class="brand-copy">
@@ -1471,7 +1473,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
           <span id="registered-count" class="chip" style="margin-left:auto">0 registrados</span>
         </div>
         <div class="card-body" style="padding-top:12px">
-          <p class="av-muted" style="margin:0 0 9px;font-size:11px">La tabla muestra los registros del mapa actual; el informe suma todos los mapas de la jornada seleccionada. El informe superior incluye únicamente la fecha de jornada seleccionada.</p>
+          <p class="av-muted" style="margin:0 0 9px;font-size:11px">La tabla y el informe muestran todos los cuarteles de la jornada seleccionada, aunque pertenezcan a mapas diferentes. Toca editar para ir al mapa de origen.</p>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Cuartel</th><th class="num">Hectáreas</th><th style="text-align:right">Acción</th></tr></thead>
@@ -2174,29 +2176,44 @@ function refreshKPIs() {
 
 /* ---------- tabla ---------- */
 function table() {
-  const body = $('registro-body'); body.replaceChildren();
-  let total = 0;
-  for (const [id, r] of Object.entries(data.registros).sort((a,b)=>cuartelCollator.compare(String(a[1]?.name||''),String(b[1]?.name||'')) || cuartelCollator.compare(String(a[0]),String(b[0])))) {
-    total += Number(r.ha) || 0;
-    const tr = document.createElement('tr');
-    const name = document.createElement('td'); name.style.fontWeight = '700'; name.textContent = displayCuartel(r)+(auditRows([r]).length?' ⚠':'');
-    const ha = document.createElement('td'); ha.className = 'num'; ha.textContent = areaBreakdownForRow(r);
-    const action = document.createElement('td'); action.style.textAlign = 'right';
-    const b = document.createElement('button'); b.className = 'btn btn-sm';
-    b.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>'; b.onclick = () => openModal(id);
-    action.append(b); tr.append(name, ha, action); body.append(tr);
+  // La tabla representa la jornada seleccionada, no solamente el mapa visible.
+  const body=$('registro-body');body.replaceChildren();
+  const rows=sortCuartelRows(collectAllActiveRows().filter(r=>r.fecha===selectedWorkDate));
+  let total=0;
+  for(const r of rows){
+    total+=Number(r.ha)||0;
+    const tr=document.createElement('tr');
+    const name=document.createElement('td');name.style.fontWeight='700';
+    name.textContent=displayCuartel(r);
+    name.title='Mapa: '+(r.mapName||mapNameForId(r.mapId));
+    const ha=document.createElement('td');ha.className='num';ha.textContent=areaBreakdownForRow(r);
+    const action=document.createElement('td');action.style.textAlign='right';
+    const btn=document.createElement('button');btn.className='btn btn-sm';
+    btn.innerHTML='<i class="fa-solid fa-pen-to-square"></i>';
+    btn.title='Revisar en '+(r.mapName||mapNameForId(r.mapId));
+    btn.onclick=async()=>{
+      const targetMap=r.mapId||'proyecto-2026';
+      if(targetMap!==activeMapId){
+        const ok=await switchActiveMap(targetMap);
+        if(!ok)return;
+      }
+      const id=r.cuartelId||Object.keys(data.registros).find(k=>data.registros[k]?.name===r.name&&data.registros[k]?.fecha===r.fecha);
+      if(id&&data.registros[id])openModal(id);
+      else toast('No se encontró el cuartel en el mapa de origen','err');
+    };
+    action.append(btn);tr.append(name,ha,action);body.append(tr);
   }
-  if (!body.children.length) {
-    const tr = document.createElement('tr'), td = document.createElement('td');
-    td.colSpan = 3; td.className = 'empty'; td.style.padding = '22px 10px';
-    td.innerHTML = '<i class="fa-solid fa-inbox"></i>Sin cuarteles registrados';
-    tr.append(td); body.append(tr);
+  if(!rows.length){
+    const tr=document.createElement('tr'),td=document.createElement('td');
+    td.colSpan=3;td.className='empty';td.style.padding='22px 10px';
+    td.innerHTML='<i class="fa-solid fa-inbox"></i>Sin cuarteles registrados para esta jornada';
+    tr.append(td);body.append(tr);
   }
-  $('registro-total').textContent = auditRows(Object.values(data.registros)).length?'REVISAR':fmt(total);
-  $('registered-count').textContent = Object.keys(data.registros).length + ' en total';
-  $('registered-count').title='Registros activos de todas las fechas. El informe usa solo la fecha seleccionada.';
-  renderReportRows(); refreshKPIs(); renderDetectedList();
-  if (!$('av-history').hidden) renderHistory();
+  $('registro-total').textContent=fmt(total);
+  $('registered-count').textContent=rows.length+' en total';
+  $('registered-count').title='Registros de todos los mapas para '+formatWorkDate(selectedWorkDate);
+  renderReportRows();refreshKPIs();renderDetectedList();
+  if(!$('av-history').hidden)renderHistory();
   updateAuditNotice();
 }
 
@@ -3327,7 +3344,7 @@ function selectWorkDate(date){
   rep('preview').hidden=true;rep('preview').textContent='';
   rep('date').value=date;
   persistWorkDate();updateWorkDateHint();
-  renderReportRows();refreshKPIs();
+  table();
   return true;
 }
 updateWorkDateHint();

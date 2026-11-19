@@ -2255,25 +2255,38 @@ $('agro-modal').addEventListener('pointerup',e=>e.stopPropagation());
 $('modal-no').onclick=()=>{if(performance.now()-modalOpenedAt<400)return;closeModal();};
 $('modal-yes').onclick=()=>{
   if(modalWorking||!modalId||!$('modal-confirm').checked||performance.now()-modalOpenedAt<650)return;
-  const id=modalId,c=data.contornos[id],src=validSourceById(id,c?.name);
-  if(data.registros[id]||!sourceCatalogReady||!src){toast('REGISTRO BLOQUEADO: ubicación no verificada','err');return;}
-  // La fecha de TRABAJO es la seleccionada; registradoEn conserva el sello real.
-  // Nunca sustituir aquí una jornada retroactiva por el día actual.
-  const ha=expectedHectares(src),workDate=selectedWorkDate,areaRule=areaRuleForSource(src);
-  if(!validWorkDate(workDate)||!Number.isFinite(ha)||ha<=0){toast('Selecciona una fecha de jornada válida (no futura)','err');return;}
-  modalWorking=true;$('modal-yes').disabled=true;
-  const previous=data.registros[id];
-  data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
-    ...(areaRule?{areaRuleVersion:areaRuleVersion(areaRule),areaComponents:areaComponentsSnapshot(src)}:{}),
-    mapId:activeMapId,mapName:mapConfig.name,mapIds:[activeMapId],registradoEn:new Date().toISOString()};
-  if(!save()){
-    if(previous)data.registros[id]=previous;else delete data.registros[id];
-    modalWorking=false;toast('NO GUARDADO: comprueba almacenamiento','err');return;
+  const id=modalId;
+  try {
+    const c=data.contornos[id],src=validSourceById(id,c?.name);
+    if(data.registros[id]||!sourceCatalogReady||!src){toast('REGISTRO BLOQUEADO: ubicación no verificada','err');return;}
+    const ha=expectedHectares(src),workDate=selectedWorkDate,areaRule=areaRuleForSource(src);
+    if(!validWorkDate(workDate)||!Number.isFinite(ha)||ha<=0){toast('Selecciona una fecha de jornada válida (no futura)','err');return;}
+    modalWorking=true;$('modal-yes').disabled=true;
+    const previous=data.registros[id];
+    data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
+      ...(areaRule?{areaRuleVersion:areaRuleVersion(areaRule),areaComponents:areaComponentsSnapshot(src)}:{}),
+      mapId:activeMapId,mapName:mapConfig.name,registradoEn:new Date().toISOString()};
+    if(!save()){
+      if(previous)data.registros[id]=previous;else delete data.registros[id];
+      toast('NO GUARDADO: comprueba almacenamiento','err');return;
+    }
+    // El registro ya está persistido: nunca bloquear el cierre por un error de refresco visual.
+    const savedRow=data.registros[id];
+    closeModal();
+    status.textContent=displayCuartel(savedRow)+' registrado.';
+    toast(displayCuartel(savedRow)+' · '+fmt(savedRow.ha)+' ha guardado','ok');
+    for(const [label,refresh] of [['marcadores',drawFlags],['tabla',table],['auditoría',updateAuditNotice]]){
+      try{refresh();}catch(err){console.error('Error al actualizar '+label+' después de guardar:',err);}
+    }
+  } catch(err){
+    console.error('Error al registrar cuartel '+id+':',err);
+    toast('Error al registrar: '+String(err?.message||err).slice(0,115),'err');
+  } finally {
+    modalWorking=false;
+    if($('agro-modal').classList.contains('show')){
+      $('modal-yes').disabled=!$('modal-confirm').checked||!modalId||!!data.registros[modalId];
+    }
   }
-  drawFlags();table();updateAuditNotice();
-  status.textContent=displayCuartel(data.registros[id])+' registrado.';
-  toast(displayCuartel(data.registros[id])+' · '+areaBreakdownForSource(src)+' guardado','ok');
-  closeModal();
 };
 $('modal-correct').onclick=()=>{
   const id=modalId,r=data.registros[id],src=validSourceById(id,r?.name);
@@ -2899,7 +2912,10 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
         const absolute=new URL(path,document.baseURI).href;
         if(!await shell.match(absolute))result.missing.push(path);
       }
-      result.ok=result.active&&result.workerVersion===EXPECTED_SW_VERSION&&result.missing.length===0;
+      // Las versiones del HTML y del SW pueden diferir temporalmente durante un despliegue.
+      // No bloquear los mapas por ese desfase si los recursos offline están completos.
+      result.versionMismatch=Boolean(result.workerVersion&&result.workerVersion!==EXPECTED_SW_VERSION);
+      result.ok=result.active&&result.missing.length===0;
     }catch(e){result.error=e?.message||String(e);}
     return result;
   }
@@ -3066,8 +3082,8 @@ function reset(){zoom=1;panX=panY=0;rotation=0;scheduleTransform();}
         }
         const shellAudit=await inspectOfflineShell();
         if(!shellAudit.ok){
-          if(!shellAudit.active)throw Error('El Service Worker V34.17 no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
-          if(shellAudit.workerVersion!==EXPECTED_SW_VERSION)throw Error('El Service Worker activo responde '+(shellAudit.workerVersion||'sin versión')+'; se esperaba '+EXPECTED_SW_VERSION+'. Recarga la página con internet para actualizarlo.');
+          if(!shellAudit.active)throw Error('El Service Worker no está activo. Revisa la publicación de sw.js y vuelve a cargar la página con internet.');
+          // No bloquear por una versión diferente del SW: la actualización puede estar en tránsito.
           if(shellAudit.missing.length)throw Error('Faltan recursos offline: '+shellAudit.missing.join(', '));
           throw Error('No se pudo verificar la caché offline: '+(shellAudit.error||'estado desconocido'));
         }

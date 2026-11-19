@@ -1471,7 +1471,7 @@ tfoot td{color:#00ff9d;border-top-color:rgba(0,255,102,.42)}
           <span id="registered-count" class="chip" style="margin-left:auto">0 registrados</span>
         </div>
         <div class="card-body" style="padding-top:12px">
-          <p class="av-muted" style="margin:0 0 9px;font-size:11px">La tabla muestra todos los registros activos del mapa, de cualquier fecha. El informe superior incluye únicamente la fecha de jornada seleccionada.</p>
+          <p class="av-muted" style="margin:0 0 9px;font-size:11px">La tabla muestra los registros del mapa actual; el informe suma todos los mapas de la jornada seleccionada. El informe superior incluye únicamente la fecha de jornada seleccionada.</p>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Cuartel</th><th class="num">Hectáreas</th><th style="text-align:right">Acción</th></tr></thead>
@@ -2145,9 +2145,9 @@ function clearHistoricalPanel(restoreWorkingDate=true) {
 
 function refreshKPIs() {
   const workDate = selectedWorkDate;
-  const hoy = Object.values(data.registros).filter(r => r.fecha === workDate);
+  const hoy = collectAllActiveRows().filter(r => r.fecha === workDate);
   $('kpi-cuarteles').textContent = hoy.length;
-  $('kpi-ha').textContent = auditRows(hoy).length ? 'REVISAR' : fmt(hoy.reduce((n,r)=>n+Number(r.ha),0))+' ha';
+  $('kpi-ha').textContent = fmt(hoy.reduce((n,r)=>n+Number(r.ha),0))+' ha';
   $('kpi-personal').textContent = Number($('rep-people').value) || 0;
   $('kpi-jornadas').textContent = Object.keys(loadJornadas()).length;
 }
@@ -2156,7 +2156,7 @@ function refreshKPIs() {
 function table() {
   const body = $('registro-body'); body.replaceChildren();
   let total = 0;
-  for (const [id, r] of Object.entries(data.registros)) {
+  for (const [id, r] of Object.entries(data.registros).sort((a,b)=>cuartelCollator.compare(String(a[1]?.name||''),String(b[1]?.name||'')) || cuartelCollator.compare(String(a[0]),String(b[0])))) {
     total += Number(r.ha) || 0;
     const tr = document.createElement('tr');
     const name = document.createElement('td'); name.style.fontWeight = '700'; name.textContent = displayCuartel(r)+(auditRows([r]).length?' ⚠':'');
@@ -2245,7 +2245,7 @@ $('modal-yes').onclick=()=>{
   const previous=data.registros[id];
   data.registros[id]={name:src.nombre,cuartelId:src.id,ha,fecha:workDate,
     ...(areaRule?{areaRuleVersion:areaRuleVersion(areaRule),areaComponents:areaComponentsSnapshot(src)}:{}),
-    mapId:activeMapId,mapName:mapConfig.name,catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,registradoEn:new Date().toISOString()};
+    mapId:activeMapId,mapName:reportMapNames(rows),mapIds:[...new Set(rows.map(r=>r.mapId||'proyecto-2026'))],registradoEn:new Date().toISOString()};
   if(!save()){
     if(previous)data.registros[id]=previous;else delete data.registros[id];
     modalWorking=false;toast('NO GUARDADO: comprueba almacenamiento','err');return;
@@ -3341,11 +3341,14 @@ async function switchActiveMap(nextId,options={}){
   const next=mapRegistry.find(m=>m.id===nextId);
   if(!next){toast('Mapa no disponible en el catálogo','err');updateMapSelectorUI();return false;}
   if(next.id===activeMapId){updateMapSelectorUI();return true;}
+  persistReport();persistWorkDate();
+  const sharedForm=Object.fromEntries(repIds.filter(id=>id!=='date').map(id=>[id,rep(id).value]));
+  const sharedDate=selectedWorkDate;
   const oldName=mapConfig.name;
   if(!options.keepHistoricalMapView)clearHistoricalMapView();
   const hasWork=Object.keys(data.registros).length>0||Object.keys(loadJornadasForMap(activeMapId)).length>0;
   const message=hasWork
-    ?'Cambiar de '+oldName+' a '+next.name+'?\n\nLos registros y jornadas de '+oldName+' quedarán guardados en su propio espacio. Se abrirán los datos independientes de '+next.name+'. No se mezclarán superficies ni cuarteles.'
+    ?'Cambiar de '+oldName+' a '+next.name+'?\n\nLos cuarteles de ambos mapas se conservarán y se sumarán en la misma jornada, según la fecha seleccionada.'
     :'Seleccionar '+next.name+' para esta jornada?\n\nSus cuarteles y hectáreas se cargarán desde su catálogo independiente.';
   if(!options.fromHistory&&!confirm(message)){updateMapSelectorUI();return false;}
   if(!save()){toast('No se pudo guardar el mapa actual; cambio cancelado','err');updateMapSelectorUI();return false;}
@@ -3365,7 +3368,9 @@ async function switchActiveMap(nextId,options={}){
   const spinner=document.createElement('div');spinner.id='loading-spinner';
   spinner.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i><p style="font-size:12.5px;margin:0">Preparando mapa seleccionado…</p><span style="font-size:10.5px;color:#4d6579">El catálogo de cuarteles se comprobará antes de permitir registros</span>';
   container.replaceChildren(spinner);
-  loadActiveMapFormState();updateMapSelectorUI();mapInstallMessage('');installLabel.textContent='Instalar todos los mapas';
+  loadActiveMapFormState();
+  if(!options.fromHistory){for(const [id,value] of Object.entries(sharedForm))rep(id).value=value;selectedWorkDate=sharedDate;manualWorkDate=sharedDate!==localDay();rep('date').value=sharedDate;persistReport();persistWorkDate();toggleCustom();}
+  updateMapSelectorUI();mapInstallMessage('');installLabel.textContent='Instalar todos los mapas';
   table();
   try{
     await loadSourceCatalog();
@@ -3397,15 +3402,15 @@ function reportMapNames(rows){
   const ids=[...new Set(rows.map(r=>r.mapId||'proyecto-2026'))];
   return ids.map(id=>mapNameForId(id)).join(' y ');
 }
-const datedRows = () => sortCuartelRows(Object.values(data.registros).filter(r => r.fecha === rep('date').value));
-const undatedRows = () => Object.values(data.registros).filter(r => !r.fecha);
+const datedRows = () => sortCuartelRows(collectAllActiveRows().filter(r => r.fecha === rep('date').value));
+const undatedRows = () => collectAllActiveRows().filter(r => !r.fecha);
 
 function formatWorkDate(date){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return String(date||'fecha desconocida');
   const [y,m,d]=date.split('-');return d+'-'+m+'-'+y;
 }
 function noRowsForDateMessage(date){
-  const all=Object.values(data.registros),groups=new Map();
+  const all=collectAllActiveRows(),groups=new Map();
   for(const row of all){if(row?.fecha)groups.set(row.fecha,(groups.get(row.fecha)||0)+1);}
   const other=[...groups.entries()].filter(([d])=>d!==date).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,4);
   if(!all.length)return 'No hay cuarteles registrados para '+formatWorkDate(date)+'.';
@@ -3422,7 +3427,7 @@ function renderReportRows() {
     empty.textContent = 'No hay cuarteles registrados para '+formatWorkDate(rep('date').value)+'.';
     host.append(empty);
     if(!historicalPanel){
-      const all=Object.values(data.registros);
+      const all=collectAllActiveRows();
       const groups=new Map();
       for(const row of all){if(!row?.fecha)continue;groups.set(row.fecha,(groups.get(row.fecha)||0)+1);}
       const other=[...groups.entries()].filter(([date])=>date!==rep('date').value).sort((a,b)=>b[0].localeCompare(a[0]));
@@ -3449,7 +3454,7 @@ function renderReportRows() {
     line.textContent = '• ' + displayCuartel(r) + ': ' + areaBreakdownForRow(r) + (r.correcciones?.length?' · RECTIFICADO':'');
     host.append(line);
   }
-  const issues=auditRows(rows);
+  const issues=rows.filter(r=>r.mapId===activeMapId).length ? auditRows(rows.filter(r=>r.mapId===activeMapId)) : [];
   rep('total').textContent = (historicalPanel?'TOTAL JORNADA ARCHIVADA: ':'TOTAL DEL DÍA: ')+(issues.length?'PENDIENTE DE AUDITORÍA':fmt(total)+' ha');
   if(issues.length){const caution=document.createElement('p');caution.style.cssText='color:#fda4af;font-size:12px;font-weight:700';caution.textContent='⚠ Registro no validado: '+issues.slice(0,3).map(p=>p.name+' ('+p.reason+')').join('; ');host.prepend(caution);}
   if (!historicalPanel && undatedRows().length) {
@@ -3460,12 +3465,12 @@ function renderReportRows() {
   }
 }
 
-function reportText() {
+async function reportText() {
   const date = rep('date').value;
   if (!validWorkDate(date)) throw Error('Selecciona una fecha válida, igual o anterior al día de hoy.');
   const rows = historicalPanel ? sortCuartelRows(historicalPanel.rows) : datedRows();
   if (!rows.length) throw Error(noRowsForDateMessage(date));
-  const issues=auditRows(rows);if(issues.length){
+  const issues=await auditMultiMapRows(rows);if(issues.length){
     const detail=issues.slice(0,6).map(p=>p.name+': '+p.reason).join(' | ');
     throw Error('AUDITORÍA DE SUPERFICIES PENDIENTE: '+detail+(issues.length>6?' | Otros '+(issues.length-6)+' registro(s).':''));
   }
@@ -3489,8 +3494,8 @@ function reportText() {
     '*🏁 Total aplicado:* *' + fmt(rows.reduce((n, r) => n + Number(r.ha || 0), 0)) + ' ha*'
   ].join('\n');
 }
-function withReport(callback) {
-  try { rep('message').textContent='';rep('message').classList.remove('report-error','report-ok');const checked=reportText();callback(checked); }
+async function withReport(callback) {
+  try { rep('message').textContent='';rep('message').classList.remove('report-error','report-ok');const checked=await reportText();await callback(checked); }
   catch (e) {
     rep('preview').hidden=true;rep('preview').textContent='';
     const message=e?.message||'No se pudo preparar el informe.';
@@ -3521,20 +3526,21 @@ rep('whatsapp-btn').onclick = () => withReport(text => {
 });
 
 /* ---------- guardar jornada ---------- */
-$('rep-save-btn').onclick = () => {
+$('rep-save-btn').onclick = async () => {
   const date = rep('date').value;
   if (!validWorkDate(date)) { rep('message').textContent = 'Selecciona una fecha válida (no futura).'; toast('Fecha de jornada inválida', 'warn'); return; }
   if (historicalPanel) { rep('message').textContent = 'Estás consultando una jornada archivada. Vuelve al registro activo para guardar otra.'; toast('Jornada histórica: solo consulta', 'warn'); return; }
   const rows = datedRows();
   if (!rows.length) { const message=noRowsForDateMessage(date);rep('message').textContent=message;toast(message.length>145?message.slice(0,142)+'…':message,'warn');return; }
-  if(!mustBeAudited(rows,'archivar la jornada'))return;
+  const problems=await auditMultiMapRows(rows);
+  if(problems.length){rep('message').textContent='No se puede guardar: '+problems.slice(0,3).map(p=>p.name+': '+p.reason).join(' | ');toast('Auditoría multimapa pendiente','err');return;}
   const store = loadJornadas();
   const total = rows.reduce((n, r) => n + (Number(r.ha) || 0), 0);
   const mix = rep('mixture').value === 'other' ? rep('custom').value.trim() : mixtures[rep('mixture').value];
   const entryId = 'j_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
   store[entryId] = {
     id: entryId,
-    mapId:activeMapId,mapName:mapConfig.name,catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,
+    mapId:activeMapId,mapName:reportMapNames(rows),mapIds:[...new Set(rows.map(r=>r.mapId||'proyecto-2026'))],
     fecha: date,
     company: rep('company').value.trim(),
     contractor: rep('contractor').value.trim(),
@@ -3544,8 +3550,8 @@ $('rep-save-btn').onclick = () => {
     people: Number(rep('people').value) || 0,
     mixture: mix,
     cuarteles: rows.length,
-    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,mapId:activeMapId,mapName:mapConfig.name,
-      catalogo:mapConfig.catalogVersion,origenSHA256:mapConfig.sourceSvgHash,ha: Number(r.ha) || 0,
+    detalle: rows.map(r => ({ name: String(r.name || ""),cuartelId:r.cuartelId||null,mapId:r.mapId||'proyecto-2026',mapName:r.mapName||mapNameForId(r.mapId||'proyecto-2026'),
+      catalogo:r.catalogo||null,origenSHA256:r.origenSHA256||null,ha: Number(r.ha) || 0,
       areaRuleVersion:r.areaRuleVersion||null,areaComponents:Array.isArray(r.areaComponents)?r.areaComponents.map(p=>({...p})):null,
       registradoEn:r.registradoEn||null,correcciones:Array.isArray(r.correcciones)?r.correcciones:[] })),
     total,
@@ -3558,21 +3564,24 @@ $('rep-save-btn').onclick = () => {
   }
   // Los cuarteles guardados quedan en el historial. Si no se puede persistir
   // la limpieza de registros activos, revertir la nueva jornada: evita duplicados.
-  const previousActive={...data.registros};
-  for (const [id, r] of Object.entries(data.registros)) {
-    if (r.fecha === date) delete data.registros[id];
+  // Transacción compensable: respaldar todos los mapas antes de borrar registros activos.
+  const mapIds=[...new Set(rows.map(r=>r.mapId||'proyecto-2026'))];
+  const backups=new Map(),changed=[];
+  let cleanupFailed=false;
+  for(const id of mapIds){
+    const original=localStorage.getItem(storeKeyForMap(id));backups.set(id,original);
+    const target=id===activeMapId?data:readStoredMapDataForMap(id);
+    const updated={...target,registros:{...target.registros}};
+    for(const [key,r] of Object.entries(updated.registros))if(r.fecha===date)delete updated.registros[key];
+    try{localStorage.setItem(storeKeyForMap(id),JSON.stringify(updated));changed.push(id);if(id===activeMapId)data=updated;}
+    catch(e){cleanupFailed=true;break;}
   }
-  if(!save()){
-    data.registros=previousActive;
-    delete store[entryId];
-    if(!saveJornadas(store)){
-      rep('message').textContent='ALERTA: la jornada quedó en historial y los registros continúan activos. Exporta respaldo y revisa antes de volver a guardar.';
-      toast('Posible duplicado: revisión obligatoria','err');
-    }else{
-      rep('message').textContent='No se pudo completar el guardado de jornada. Se conservaron los registros activos.';
-      toast('Guardado cancelado: registros conservados','err');
-    }
-    updateAuditNotice();return;
+  if(cleanupFailed){
+    let rollbackOk=true;
+    for(const id of changed){try{const prior=backups.get(id);if(prior===null)localStorage.removeItem(storeKeyForMap(id));else localStorage.setItem(storeKeyForMap(id),prior);if(id===activeMapId)data=readStoredMapDataForMap(id);}catch(e){rollbackOk=false;}}
+    if(rollbackOk){delete store[entryId];rollbackOk=saveJornadas(store);}
+    rep('message').textContent=rollbackOk?'No se pudo completar el guardado; los registros se conservaron.':'ALERTA: recuperación incompleta. No vuelvas a guardar; exporta un respaldo y revisa los datos.';
+    toast(rep('message').textContent,'err');updateAuditNotice();return;
   }
   drawFlags();table();
   // Mantener los datos de trabajo: solo se limpian hectáreas y marcadores.
@@ -3690,6 +3699,14 @@ function historyDisplayName(row,snapshot,mapId){
 function historyAreaBreakdown(row,snapshot,mapId){
   const src=historySourceForRow(row,snapshot,mapId);if(!src)return fmt(row?.ha)+' ha';
   return areaBreakdownForSource(src,mapId);
+}
+async function auditMultiMapRows(rows){
+  const problems=[];
+  for(const id of [...new Set(rows.map(r=>r.mapId||'proyecto-2026'))]){
+    const subset=rows.filter(r=>(r.mapId||'proyecto-2026')===id);
+    problems.push(...await auditRowsForMap(subset,id));
+  }
+  return problems;
 }
 async function auditRowsForMap(rows,mapId,snapshot=null){
   const problems=[];
@@ -3832,13 +3849,13 @@ async function historyExtract(date,rows,j,mapId=null,snapshot=null){
   mapId=mapId||j?.mapId||rows[0]?.mapId||'proyecto-2026';
   snapshot=snapshot||await loadHistoryCatalogSnapshot(mapId);
   const dateText=date==='Sin fecha'?'Sin fecha':date.split('-').reverse().join('-');
-  const issues=await auditRowsForMap(rows,mapId,snapshot);
+  const issues=await auditMultiMapRows(rows);
   if(issues.length)throw Error('Extracto histórico BLOQUEADO: '+issues.slice(0,3).map(p=>p.name+' '+p.reason).join(' | '));
   const total=rows.reduce((n,r)=>n+(Number(r.ha)||0),0);
   return [
     '*📋 EXTRACTO DE JORNADA · AGRO VALLE*',
     '*📅 Fecha:* '+dateText,
-    '*🗺️ Mapa de registro:* '+(j?.mapName||snapshot.config.name),
+    '*🗺️ Mapa de registro:* '+reportMapNames(rows),
     '*🏢 Empresa:* '+(j?.company||'—'),
     '*👤 Contratista:* '+(j?.contractor||'—'),
     '*👨‍💼 Supervisor:* '+(j?.supervisor||'—'),
@@ -3847,7 +3864,7 @@ async function historyExtract(date,rows,j,mapId=null,snapshot=null){
     '*👥 Personal:* '+(j?.people==null?'—':j.people+' personas'),
     '*💧 Mezcla utilizada:* '+(j?.mixture||'—'), '',
     '*📍 CUARTELES Y HECTÁREAS*',
-    ...rows.map(r=>'• '+historyDisplayName(r,snapshot,mapId)+': '+historyAreaBreakdown(r,snapshot,mapId)+(r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
+    ...sortCuartelRows(rows).map(r=>'• '+(r.name||'Cuartel')+': '+fmt(r.ha)+' ha'+(r.correcciones?.length?' (RECTIFICADO CON AUDITORÍA)':'')), '',
     '*Cuarteles:* '+rows.length,
     '*🏁 TOTAL APLICADO: '+fmt(total)+' ha*'
   ].join('\n');
@@ -3876,7 +3893,7 @@ async function renderHistory(){
   for(const [date,entry] of groups){
     const mapId=entry.mapId||entry.jornada?.mapId||entry.rows[0]?.mapId||'proyecto-2026';
     let snapshot=null,errors=[];
-    try{snapshot=await loadHistoryCatalogSnapshot(mapId);errors=await auditRowsForMap(entry.rows,mapId,snapshot);}
+    try{snapshot=await loadHistoryCatalogSnapshot(mapId);errors=await auditMultiMapRows(entry.rows);}
     catch(err){errors=[{name:'CATÁLOGO',reason:err?.message||String(err)}];}
     prepared.push({date,entry,mapId,snapshot,errors});
   }
@@ -3919,9 +3936,9 @@ async function renderHistory(){
     }else{const note=document.createElement('p');note.className='av-muted';note.textContent='Los datos generales aún no se han guardado para esta fecha.';details.append(note);}
     const heading=document.createElement('p');heading.className='sec-title hist-section hist-section-cuarterles';heading.style.marginTop='15px';heading.textContent='Cuarteles y hectáreas';details.append(heading);
     if(!rows.length)details.append(historyDetail('Cuarteles','Sin cuarteles registrados'));
-    for(const r of rows){
-      const label=snapshot?historyDisplayName(r,snapshot,mapId):(r.name||'Cuartel');
-      const value=snapshot?historyAreaBreakdown(r,snapshot,mapId):(fmt(r.ha)+' ha');
+    for(const r of sortCuartelRows(rows)){
+      const label=r.name||'Cuartel';
+      const value=fmt(r.ha)+' ha';
       details.append(historyDetail(label,value+(r.correcciones?.length?' · RECTIFICADO':'')));
     }
     if(errors.length){const warning=document.createElement('p');warning.className='hist-warning';warning.style.cssText='font-weight:800';warning.textContent='⚠ PENDIENTE DE AUDITORÍA: '+errors.slice(0,3).map(p=>p.name+' '+p.reason).join(' | ');details.append(warning);}
@@ -3932,7 +3949,7 @@ async function renderHistory(){
     const toggle=document.createElement('button');toggle.className='btn btn-sm hist-toggle';toggle.innerHTML='<i class="fa-solid fa-list"></i>Ver jornada completa';toggle.setAttribute('aria-expanded','false');
     toggle.onclick=()=>{const open=details.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.innerHTML=open?'<i class="fa-solid fa-chevron-up"></i>Ocultar detalles':'<i class="fa-solid fa-list"></i>Ver jornada completa';};actions.append(toggle);
 
-    const canRectify=saved&&errors.length&&snapshot&&errors.every(error=>{
+    const canRectify=saved&&!(j?.mapIds?.length>1)&&errors.length&&snapshot&&errors.every(error=>{
       const row=rows.find(r=>historyDisplayName(r,snapshot,mapId)===error.name)||rows.find(r=>r.name===error.name);
       const src=row?historySourceForRow(row,snapshot,mapId):null;return !!src&&!!areaRuleForSource(src,mapId);
     });
@@ -3944,7 +3961,7 @@ async function renderHistory(){
     if(date!=='Sin fecha'){
       const viewMap=document.createElement('button');viewMap.type='button';viewMap.className='btn btn-sm btn-action-cyan';
       viewMap.innerHTML='<i class="fa-solid fa-map-location-dot"></i>Ver mapa';
-      viewMap.onclick=()=>showHistoryOnMap({date,entry,mapId,rows,snapshot}).catch(err=>toast('No se pudo abrir el mapa: '+(err.message||err),'err'));
+      viewMap.onclick=()=>showHistoryOnMap({date,entry,mapId,rows:rows.filter(r=>(r.mapId||'proyecto-2026')===mapId),snapshot}).catch(err=>toast('No se pudo abrir el mapa: '+(err.message||err),'err'));
       actions.append(viewMap);
     }
 
@@ -3990,11 +4007,11 @@ $('hist-export').onclick=async()=>{
   for(const [date,entry] of groups){
     const mapId=entry.mapId||entry.jornada?.mapId||entry.rows[0]?.mapId||'proyecto-2026';
     let snapshot;try{snapshot=await loadHistoryCatalogSnapshot(mapId);}catch(err){toast('Exportación bloqueada: '+err.message,'err');return;}
-    const issues=await auditRowsForMap(entry.rows,mapId,snapshot);if(issues.length){toast('Exportación bloqueada: '+issues.slice(0,3).map(x=>x.name).join(', '),'err');return;}
+    const issues=await auditMultiMapRows(entry.rows);if(issues.length){toast('Exportación bloqueada: '+issues.slice(0,3).map(x=>x.name).join(', '),'err');return;}
     const meta=entry.jornada||{};
     for(const r of entry.rows){
       const changes=Array.isArray(r.correcciones)?r.correcciones.map(c=>String(c.anteriorHa)+' ha -> '+String(c.nuevaHa)+' ha ('+(c.corregidoEn||'sin hora')+')').join(' | '):'';
-      rows.push([mapId,meta.mapName||entry.mapName||snapshot.config.name,date,historyDisplayName(r,snapshot,mapId),fmt(r.ha),historyAreaBreakdown(r,snapshot,mapId),changes||'NO',meta.company||'',meta.contractor||'',meta.supervisor||'',meta.farm||'',meta.sector||'',String(meta.people??''),meta.mixture||'']);
+      rows.push([r.mapId||mapId,r.mapName||mapNameForId(r.mapId||mapId),date,r.name||'Cuartel',fmt(r.ha),fmt(r.ha)+' ha',changes||'NO',meta.company||'',meta.contractor||'',meta.supervisor||'',meta.farm||'',meta.sector||'',String(meta.people??''),meta.mixture||'']);
     }
   }
   const csv='\uFEFF'+rows.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
